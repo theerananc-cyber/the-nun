@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+  body { background-color: #020617; color: #f1f5f9; margin: 0; }
+  input, select, textarea { color: #f1f5f9; }
+  /* iOS safe area */
+  .safe-pb { padding-bottom: env(safe-area-inset-bottom, 24px); }
+}
