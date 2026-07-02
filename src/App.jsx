@@ -254,7 +254,7 @@ function QuickAddModal({onSave, onClose}) {
             <div style={{display:'flex',gap:6}}>
               <input type="date" value={dueDate} onChange={e=>setDueDate(e.target.value)} style={{...F,flex:1}}/>
               <input type="text" value={dueTime} onChange={e=>setDueTime(e.target.value)} placeholder="HH:MM" maxLength={5}
-                style={{...F,width:68,flexShrink:0,color:dueTime?'#fbbf24':T3,textAlign:'center'}}/>
+                style={{...F,width:90,flexShrink:0,color:dueTime?'#fbbf24':T3,textAlign:'center',fontSize:14,letterSpacing:2}}/>
             </div>
             {dueDate&&dl!==null&&(
               <div style={{fontSize:10,marginTop:3,color:dl<0?'#f87171':dl===0?'#fbbf24':T2,fontWeight:600}}>
@@ -509,7 +509,7 @@ function PlanModal({task, onSave, onDelete, onClose}) {
             <div style={{display:'flex',gap:6}}>
               <input type="date" value={dueDate||''} onChange={e=>setDueDate(e.target.value)} style={{...F,flex:1}}/>
               <input type="text" value={dueTime} onChange={e=>setDueTime(e.target.value)} placeholder="HH:MM" maxLength={5}
-                style={{...F,width:72,flexShrink:0,color:dueTime?'#fbbf24':T3,textAlign:'center'}}/>
+                style={{...F,width:90,flexShrink:0,color:dueTime?'#fbbf24':T3,textAlign:'center',fontSize:14,letterSpacing:2}}/>
             </div>
             {dueTime&&<div style={{fontSize:10,color:'#fbbf24',marginTop:3}}>⏰ Due by {dueTime}</div>}
             <label style={L}>Department</label>
