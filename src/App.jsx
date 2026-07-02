@@ -798,7 +798,7 @@ function KanbanBoard({tasks, onPlan, onStatusCycle}) {
   function handleDragEnd() { setDragId(null); setOverCol(null); }
 
   return(
-    <div style={{display:'flex',gap:10,overflowX:'auto',paddingBottom:8,alignItems:'flex-start'}}>
+    <div style={{display:'flex',gap:8,alignItems:'flex-start'}}>
       {KANBAN_COLS.map(col=>{
         const colTasks = tasks.filter(tk=>(tk.status||'not_started')===col.key)
           .sort((a,b)=>{
@@ -813,7 +813,7 @@ function KanbanBoard({tasks, onPlan, onStatusCycle}) {
             onDragOver={e=>handleDragOver(e,col.key)}
             onDrop={e=>handleDrop(e,col.key)}
             onDragLeave={()=>setOverCol(null)}
-            style={{flex:'0 0 300px',minWidth:300,background:isOver?`${col.color}10`:S1,border:`1px solid ${isOver?col.color:BD}`,borderTop:`3px solid ${col.color}`,borderRadius:10,padding:12,transition:'background .15s,border-color .15s'}}>
+            style={{flex:1,minWidth:0,background:isOver?`${col.color}10`:S1,border:`1px solid ${isOver?col.color:BD}`,borderTop:`3px solid ${col.color}`,borderRadius:10,padding:10,transition:'background .15s,border-color .15s'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
               <span style={{fontSize:11,fontWeight:700,color:col.color,textTransform:'uppercase',letterSpacing:'.06em'}}>{col.label}</span>
               <span style={{fontSize:10,background:`${col.color}22`,color:col.color,borderRadius:10,padding:'1px 7px',fontWeight:700}}>{colTasks.length}</span>
