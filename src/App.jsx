@@ -168,6 +168,11 @@ function useGoogleCalendar() {
         startTime:ev.start?.dateTime?ev.start.dateTime.slice(11,16):null,
         endTime:ev.end?.dateTime?ev.end.dateTime.slice(11,16):null,
         allDay:!!ev.start?.date&&!ev.start?.dateTime,
+        description:ev.description||null,
+        location:ev.location||null,
+        htmlLink:ev.htmlLink||null,
+        attendees:(ev.attendees||[]).map(a=>({name:a.displayName||a.email,email:a.email,status:a.responseStatus})),
+        organizer:ev.organizer?.displayName||ev.organizer?.email||null,
       })));
     } catch(e){} finally{setGcalLoad(false);}
   }
@@ -883,13 +888,86 @@ function KanbanBoard({tasks, onPlan, onStatusCycle}) {
   );
 }
 
+// ─── GCAL EVENT MODAL ────────────────────────────────────────────────────────
+function GCalEventModal({ev, onClose}) {
+  if(!ev) return null;
+  const statusIcon = s => s==='accepted'?'✅':s==='declined'?'❌':s==='tentative'?'❓':'⬜';
+  return(
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.85)',display:'flex',alignItems:'center',justifyContent:'center',padding:16,zIndex:60}} onClick={onClose}>
+      <div style={{background:S1,border:`1px solid ${GCAL}44`,borderLeft:`3px solid ${GCAL}`,borderRadius:16,padding:22,width:'100%',maxWidth:460,maxHeight:'85vh',overflowY:'auto'}} onClick={e=>e.stopPropagation()}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:16}}>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:10,color:GCAL,fontWeight:700,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:4}}>📅 Google Calendar</div>
+            <div style={{fontSize:16,fontWeight:700,color:T1,lineHeight:1.4}}>{ev.title}</div>
+          </div>
+          <button onClick={onClose} style={{background:'none',border:'none',color:T3,cursor:'pointer',marginLeft:10}}><X size={15}/></button>
+        </div>
+
+        {/* Date & Time */}
+        <div style={{background:S2,border:`1px solid ${BD}`,borderRadius:8,padding:'10px 14px',marginBottom:12}}>
+          <div style={{fontSize:12,color:T2,fontWeight:600}}>
+            {fmtLong(ev.date)}
+          </div>
+          {ev.startTime&&<div style={{fontSize:14,color:GCAL,fontWeight:700,fontFamily:'monospace',marginTop:3}}>
+            {to12h(ev.startTime)}{ev.endTime?` → ${to12h(ev.endTime)}`:''}
+          </div>}
+          {ev.allDay&&<div style={{fontSize:12,color:T3,marginTop:3}}>All day</div>}
+        </div>
+
+        {/* Location */}
+        {ev.location&&(
+          <div style={{display:'flex',gap:8,alignItems:'flex-start',marginBottom:10,fontSize:12,color:T2}}>
+            <span style={{flexShrink:0}}>📍</span><span>{ev.location}</span>
+          </div>
+        )}
+
+        {/* Description */}
+        {ev.description&&(
+          <div style={{background:S2,border:`1px solid ${BD}`,borderRadius:8,padding:'10px 14px',marginBottom:12}}>
+            <div style={{fontSize:10,color:T3,fontWeight:700,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:6}}>Details</div>
+            <div style={{fontSize:12,color:T2,lineHeight:1.6,whiteSpace:'pre-wrap'}}>{ev.description.replace(/<[^>]*>/g,'')}</div>
+          </div>
+        )}
+
+        {/* Organizer */}
+        {ev.organizer&&(
+          <div style={{fontSize:12,color:T3,marginBottom:8}}>
+            <span style={{color:T2,fontWeight:600}}>Organizer:</span> {ev.organizer}
+          </div>
+        )}
+
+        {/* Attendees */}
+        {ev.attendees&&ev.attendees.length>0&&(
+          <div style={{background:S2,border:`1px solid ${BD}`,borderRadius:8,padding:'10px 14px',marginBottom:12}}>
+            <div style={{fontSize:10,color:T3,fontWeight:700,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:8}}>Attendees ({ev.attendees.length})</div>
+            {ev.attendees.map((a,i)=>(
+              <div key={i} style={{display:'flex',alignItems:'center',gap:8,marginBottom:5,fontSize:12}}>
+                <span>{statusIcon(a.status)}</span>
+                <span style={{color:T2,flex:1}}>{a.name}</span>
+                <span style={{fontSize:10,color:T3}}>{a.status}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {ev.htmlLink&&(
+          <a href={ev.htmlLink} target="_blank" rel="noreferrer"
+            style={{display:'block',textAlign:'center',padding:'9px',borderRadius:8,border:`1px solid ${GCAL}44`,color:GCAL,fontSize:12,fontWeight:700,textDecoration:'none',marginTop:4}}>
+            Open in Google Calendar ↗
+          </a>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── CALENDAR GRID ───────────────────────────────────────────────────────────
 function getTaskBlocks(task) {
   if(!task.sessions||task.sessions.length===0) return [];
   return task.sessions.map(s=>({task, session:s}));
 }
 
-function CalendarGrid({days, tasks, gcalEvents, onSlotClick, onTaskClick, typeFilter}) {
+function CalendarGrid({days, tasks, gcalEvents, onSlotClick, onTaskClick, onGcalClick, typeFilter}) {
   const t=today(), now=new Date(), nowH=now.getHours(), nowM=now.getMinutes();
   const hasGcal=gcalEvents.length>0;
 
@@ -1011,7 +1089,8 @@ function CalendarGrid({days, tasks, gcalEvents, onSlotClick, onTaskClick, typeFi
                   const top=px(ev.startTime); if(top===null) return null;
                   const h=bh(ev.startTime,ev.endTime);
                   return(
-                    <div key={ev.id} style={{position:'absolute',top,left:`calc(${taskW} + 1px)`,width:'calc(42% - 2px)',height:h,borderRadius:5,background:'rgba(16,185,129,.13)',border:'1px solid rgba(16,185,129,.35)',borderLeft:`3px solid ${GCAL}`,padding:'4px 7px',overflow:'hidden',zIndex:5,boxSizing:'border-box'}}>
+                    <div key={ev.id} onClick={e=>{e.stopPropagation();onGcalClick&&onGcalClick(ev);}}
+                      style={{position:'absolute',top,left:`calc(${taskW} + 1px)`,width:'calc(42% - 2px)',height:h,borderRadius:5,background:'rgba(16,185,129,.13)',border:'1px solid rgba(16,185,129,.35)',borderLeft:`3px solid ${GCAL}`,padding:'4px 7px',overflow:'hidden',zIndex:5,boxSizing:'border-box',cursor:'pointer'}}>
                       <div style={{fontSize:12,fontWeight:700,color:GCAL,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ev.title}</div>
                       {h>30&&<div style={{fontSize:11,color:'rgba(16,185,129,.8)',fontFamily:'monospace',marginTop:1}}>{to12h(ev.startTime)}{ev.endTime?` → ${to12h(ev.endTime)}`:''}</div>}
                     </div>
@@ -2059,6 +2138,7 @@ function TheNun({session, demoMode}) {
   const [typeFilter, setTypeFilter] = useState(['work','meeting','personal']);
   const [quickOpen,  setQuickOpen]  = useState(false);
   const [planTask,   setPlanTask]   = useState(null);
+  const [selGcalEvent, setSelGcalEvent] = useState(null);
   const [showReport,   setShowReport]   = useState(false);
   const [showMorning,  setShowMorning]  = useState(false);
   const [showEOD,      setShowEOD]      = useState(false);
@@ -2304,6 +2384,7 @@ function TheNun({session, demoMode}) {
                 setPlanTask({id:uid(),title:'New Task',dueDate:date,priority:'normal',taskType:'work',status:'not_started',department:null,notes:'',sessions:[{id:uid(),date,startTime:time,endTime:null}],important:false,rescheduleCount:0,createdAt:new Date().toISOString(),statusHistory:[{status:'not_started',at:new Date().toISOString()}]});
               }}
               onTaskClick={setPlanTask}
+              onGcalClick={setSelGcalEvent}
               typeFilter={typeFilter}
             />
           </div>
@@ -2331,6 +2412,7 @@ function TheNun({session, demoMode}) {
       {/* MODALS */}
       {quickOpen&&<QuickAddModal onSave={quickAdd} onClose={()=>setQuickOpen(false)}/>}
       {planTask&&<PlanModal task={planTask} onSave={savePlan} onDelete={planTask.id&&tasks.find(t=>t.id===planTask.id)?deleteTk:null} onClose={()=>setPlanTask(null)}/>}
+      {selGcalEvent&&<GCalEventModal ev={selGcalEvent} onClose={()=>setSelGcalEvent(null)}/>}
       {showReport&&<ReportModal tasks={tasks} onClose={()=>setShowReport(false)}/>}
       {showMorning&&<MorningBriefModal tasks={tasks} mood={mood} onSetMood={saveMood} onClose={()=>setShowMorning(false)}/>}
       {showEOD&&<EndOfDayModal tasks={tasks} onClose={()=>setShowEOD(false)} onSaveNote={saveEOD}/>}
