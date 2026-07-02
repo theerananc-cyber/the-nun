@@ -1778,16 +1778,7 @@ function AuthScreen() {
 
 // ─── ENTRY ───────────────────────────────────────────────────────────────────
 export default function App() {
-  if(DEMO_MODE) return <TheNun demoMode/>;
-  const [session,setSession]=useState(undefined);
-  useEffect(()=>{
-    supabase.auth.getSession().then(({data})=>setSession(data.session));
-    const{data:{subscription}}=supabase.auth.onAuthStateChange((_,s)=>setSession(s));
-    return()=>subscription.unsubscribe();
-  },[]);
-  if(session===undefined) return <Splash/>;
-  if(!session) return <AuthScreen/>;
-  return <TheNun session={session}/>;
+  return <TheNun demoMode={DEMO_MODE}/>;
 }
 
 // ─── THE NUN ─────────────────────────────────────────────────────────────────
