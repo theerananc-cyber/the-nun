@@ -740,11 +740,13 @@ function InboxView({tasks, onPlan, onStatusCycle, onPomodoro}) {
 }
 
 // ─── KANBAN BOARD ────────────────────────────────────────────────────────────
-const KANBAN_COLS = [
+const KANBAN_COLS_ACTIVE   = [
   { key:'not_started', label:'Not Started', color:'#94a3b8' },
   { key:'in_progress', label:'In Progress', color:'#60a5fa' },
-  { key:'done',        label:'Done',        color:'#34d399' },
-  { key:'cancelled',   label:'Cancelled',   color:'#f87171' },
+];
+const KANBAN_COLS_CLOSED = [
+  { key:'done',      label:'Done',      color:'#34d399' },
+  { key:'cancelled', label:'Cancelled', color:'#f87171' },
 ];
 
 function KanbanCard({task, onPlan, onStatusCycle, onDragStart}) {
@@ -762,7 +764,7 @@ function KanbanCard({task, onPlan, onStatusCycle, onDragStart}) {
           style={{flexShrink:0,marginTop:2,background:STATUS[task.status||'not_started'].bg,border:`1px solid ${STATUS[task.status||'not_started'].border}`,borderRadius:5,cursor:'pointer',color:STATUS[task.status||'not_started'].color,padding:'5px 7px',display:'flex',alignItems:'center'}}>
           {React.createElement(STATUS[task.status||'not_started'].Icon,{size:13})}
         </button>
-        <span style={{fontSize:13,fontWeight:600,color:task.status==='done'||task.status==='cancelled'?T3:T1,flex:1,cursor:'pointer',textDecoration:task.status==='done'||task.status==='cancelled'?'line-through':'none',lineHeight:1.4,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}
+        <span style={{fontSize:13,fontWeight:600,color:task.status==='done'||task.status==='cancelled'?T3:T1,flex:1,cursor:'pointer',textDecoration:task.status==='done'||task.status==='cancelled'?'line-through':'none',lineHeight:1.4}}
           onClick={()=>onPlan(task)}>
           {task.important&&'★ '}{tt.icon} {task.title}
         </span>
@@ -780,6 +782,7 @@ function KanbanCard({task, onPlan, onStatusCycle, onDragStart}) {
 function KanbanBoard({tasks, onPlan, onStatusCycle}) {
   const [dragId, setDragId] = useState(null);
   const [overCol, setOverCol] = useState(null);
+  const [showClosed, setShowClosed] = useState(false);
 
   function handleDragStart(e, id) {
     setDragId(id);
@@ -797,9 +800,20 @@ function KanbanBoard({tasks, onPlan, onStatusCycle}) {
   }
   function handleDragEnd() { setDragId(null); setOverCol(null); }
 
+  const doneCount = tasks.filter(tk=>tk.status==='done').length;
+  const cancelCount = tasks.filter(tk=>tk.status==='cancelled').length;
+  const cols = showClosed ? [...KANBAN_COLS_ACTIVE, ...KANBAN_COLS_CLOSED] : KANBAN_COLS_ACTIVE;
+
   return(
+    <div style={{display:'flex',flexDirection:'column',gap:10}}>
+      <div style={{display:'flex',justifyContent:'flex-end'}}>
+        <button onClick={()=>setShowClosed(s=>!s)}
+          style={{padding:'4px 12px',borderRadius:20,border:`1px solid ${BD2}`,background:'transparent',color:T3,fontSize:11,cursor:'pointer',display:'flex',alignItems:'center',gap:5}}>
+          {showClosed ? '← Hide Done/Cancelled' : `Show Done (${doneCount}) + Cancelled (${cancelCount}) →`}
+        </button>
+      </div>
     <div style={{display:'flex',gap:8,alignItems:'flex-start'}}>
-      {KANBAN_COLS.map(col=>{
+      {cols.map(col=>{
         const colTasks = tasks.filter(tk=>(tk.status||'not_started')===col.key)
           .sort((a,b)=>{
             const pa=a.priority==='urgent'?0:a.priority==='high'?1:2;
@@ -829,6 +843,7 @@ function KanbanBoard({tasks, onPlan, onStatusCycle}) {
           </div>
         );
       })}
+    </div>
     </div>
   );
 }
