@@ -762,7 +762,7 @@ function KanbanCard({task, onPlan, onStatusCycle, onDragStart}) {
           style={{flexShrink:0,marginTop:2,background:STATUS[task.status||'not_started'].bg,border:`1px solid ${STATUS[task.status||'not_started'].border}`,borderRadius:5,cursor:'pointer',color:STATUS[task.status||'not_started'].color,padding:'5px 7px',display:'flex',alignItems:'center'}}>
           {React.createElement(STATUS[task.status||'not_started'].Icon,{size:13})}
         </button>
-        <span style={{fontSize:14,fontWeight:600,color:task.status==='done'||task.status==='cancelled'?T3:T1,flex:1,cursor:'pointer',textDecoration:task.status==='done'||task.status==='cancelled'?'line-through':'none',lineHeight:1.5}}
+        <span style={{fontSize:13,fontWeight:600,color:task.status==='done'||task.status==='cancelled'?T3:T1,flex:1,cursor:'pointer',textDecoration:task.status==='done'||task.status==='cancelled'?'line-through':'none',lineHeight:1.4,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}
           onClick={()=>onPlan(task)}>
           {task.important&&'★ '}{tt.icon} {task.title}
         </span>
@@ -818,7 +818,7 @@ function KanbanBoard({tasks, onPlan, onStatusCycle}) {
               <span style={{fontSize:11,fontWeight:700,color:col.color,textTransform:'uppercase',letterSpacing:'.06em'}}>{col.label}</span>
               <span style={{fontSize:10,background:`${col.color}22`,color:col.color,borderRadius:10,padding:'1px 7px',fontWeight:700}}>{colTasks.length}</span>
             </div>
-            <div style={{display:'flex',flexDirection:'column',gap:6,minHeight:60}}>
+            <div style={{display:'flex',flexDirection:'column',gap:6,minHeight:400,overflowY:'auto'}}>
               {colTasks.map(tk=>(
                 <KanbanCard key={tk.id} task={tk} onPlan={onPlan} onStatusCycle={onStatusCycle} onDragStart={handleDragStart} onDragEnd={handleDragEnd}/>
               ))}
