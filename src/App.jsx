@@ -756,18 +756,18 @@ function KanbanCard({task, onPlan, onStatusCycle, onDragStart}) {
   const isDeleg = !!task.delegatedTo;
   return(
     <div draggable onDragStart={e=>onDragStart(e, task.id)}
-      style={{background:S2,border:`1px solid ${BD}`,borderLeft:`3px solid ${bc.left}`,borderRadius:7,padding:'9px 11px',cursor:'grab',userSelect:'none'}}>
-      <div style={{display:'flex',gap:6,alignItems:'flex-start',marginBottom:6}}>
+      style={{background:S2,border:`1px solid ${BD}`,borderLeft:`4px solid ${bc.left}`,borderRadius:8,padding:'12px 14px',cursor:'grab',userSelect:'none'}}>
+      <div style={{display:'flex',gap:8,alignItems:'flex-start',marginBottom:8}}>
         <button onClick={e=>{e.stopPropagation();onStatusCycle(task.id);}}
-          style={{flexShrink:0,marginTop:1,background:STATUS[task.status||'not_started'].bg,border:`1px solid ${STATUS[task.status||'not_started'].border}`,borderRadius:4,cursor:'pointer',color:STATUS[task.status||'not_started'].color,padding:'3px 5px',display:'flex',alignItems:'center'}}>
-          {React.createElement(STATUS[task.status||'not_started'].Icon,{size:10})}
+          style={{flexShrink:0,marginTop:2,background:STATUS[task.status||'not_started'].bg,border:`1px solid ${STATUS[task.status||'not_started'].border}`,borderRadius:5,cursor:'pointer',color:STATUS[task.status||'not_started'].color,padding:'5px 7px',display:'flex',alignItems:'center'}}>
+          {React.createElement(STATUS[task.status||'not_started'].Icon,{size:13})}
         </button>
-        <span style={{fontSize:12,fontWeight:600,color:task.status==='done'||task.status==='cancelled'?T3:T1,flex:1,cursor:'pointer',textDecoration:task.status==='done'||task.status==='cancelled'?'line-through':'none',lineHeight:1.4}}
+        <span style={{fontSize:14,fontWeight:600,color:task.status==='done'||task.status==='cancelled'?T3:T1,flex:1,cursor:'pointer',textDecoration:task.status==='done'||task.status==='cancelled'?'line-through':'none',lineHeight:1.5}}
           onClick={()=>onPlan(task)}>
           {task.important&&'★ '}{tt.icon} {task.title}
         </span>
       </div>
-      <div style={{display:'flex',gap:3,flexWrap:'wrap'}}>
+      <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
         {task.priority!=='normal'&&<Chip c={p.dot} bg={p.bg} br={p.border}>{p.label}</Chip>}
         {dl&&<Chip c={dl.color} bg={`${dl.color}14`} br={`${dl.color}30`}>{dl.text}</Chip>}
         {d&&<Chip c={d.color} bg={d.bg+'aa'} br={d.color+'44'}><Building2 size={8}/>{d.code}</Chip>}
@@ -813,7 +813,7 @@ function KanbanBoard({tasks, onPlan, onStatusCycle}) {
             onDragOver={e=>handleDragOver(e,col.key)}
             onDrop={e=>handleDrop(e,col.key)}
             onDragLeave={()=>setOverCol(null)}
-            style={{flex:'0 0 240px',minWidth:240,background:isOver?`${col.color}10`:S1,border:`1px solid ${isOver?col.color:BD}`,borderTop:`3px solid ${col.color}`,borderRadius:10,padding:10,transition:'background .15s,border-color .15s'}}>
+            style={{flex:'0 0 300px',minWidth:300,background:isOver?`${col.color}10`:S1,border:`1px solid ${isOver?col.color:BD}`,borderTop:`3px solid ${col.color}`,borderRadius:10,padding:12,transition:'background .15s,border-color .15s'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
               <span style={{fontSize:11,fontWeight:700,color:col.color,textTransform:'uppercase',letterSpacing:'.06em'}}>{col.label}</span>
               <span style={{fontSize:10,background:`${col.color}22`,color:col.color,borderRadius:10,padding:'1px 7px',fontWeight:700}}>{colTasks.length}</span>
