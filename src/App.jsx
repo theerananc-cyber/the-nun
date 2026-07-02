@@ -506,7 +506,12 @@ function PlanModal({task, onSave, onDelete, onClose}) {
               ))}
             </div>
             <label style={L}>Deadline</label>
-            <input type="date" value={dueDate||''} onChange={e=>setDueDate(e.target.value)} style={{...F,width:'100%'}}/>
+            <div style={{display:'flex',gap:6}}>
+              <input type="date" value={dueDate||''} onChange={e=>setDueDate(e.target.value)} style={{...F,flex:1}}/>
+              <input type="text" value={dueTime} onChange={e=>setDueTime(e.target.value)} placeholder="HH:MM" maxLength={5}
+                style={{...F,width:72,flexShrink:0,color:dueTime?'#fbbf24':T3,textAlign:'center'}}/>
+            </div>
+            {dueTime&&<div style={{fontSize:10,color:'#fbbf24',marginTop:3}}>⏰ Due by {dueTime}</div>}
             <label style={L}>Department</label>
             <select value={dept} onChange={e=>setDept(e.target.value)} style={{...F,width:'100%',color:dept&&DEPT[dept]?DEPT[dept].color:T3}}>
               <option value="">No Department</option>
