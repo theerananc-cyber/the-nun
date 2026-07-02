@@ -103,15 +103,27 @@ const minutesBetween = (s,e) => { if(!s||!e) return 0; const [sh,sm]=s.split(':'
 const fmtDuration = mins => mins>0?`${Math.floor(mins/60)}h ${mins%60}m`:'';
 
 // ─── COLOR ───────────────────────────────────────────────────────────────────
+function urgencyLeft(dueDate) {
+  if(!dueDate) return null;
+  const d = daysUntil(dueDate);
+  if(d < 0)  return '#f87171'; // overdue
+  if(d === 0) return '#fbbf24'; // today
+  if(d <= 2)  return '#fb923c'; // very soon
+  if(d <= 7)  return '#a78bfa'; // this week
+  return null;
+}
+
 function blockColor(task) {
-  if(task.priority==='urgent') return { color:'#f87171', bg:'rgba(248,113,113,.2)',  border:'rgba(248,113,113,.45)', left:'#f87171' };
-  if(task.priority==='high')   return { color:'#fb923c', bg:'rgba(251,146,60,.2)',   border:'rgba(251,146,60,.45)',  left:'#fb923c' };
+  const ul = urgencyLeft(task.dueDate);
+  // Delegated = cyan
+  if(task.delegatedTo) return { color:'#67e8f9', bg:'rgba(103,232,249,.13)', border:'rgba(103,232,249,.35)', left: ul||'#67e8f9' };
+  // Priority overrides box color
+  if(task.priority==='urgent') return { color:'#f87171', bg:'rgba(248,113,113,.2)',  border:'rgba(248,113,113,.45)', left: ul||'#f87171' };
+  if(task.priority==='high')   return { color:'#fb923c', bg:'rgba(251,146,60,.2)',   border:'rgba(251,146,60,.45)',  left: ul||'#fb923c' };
   const tt = TASK_TYPES[task.taskType||'work'];
-  if(task.taskType==='meeting')  return { color:tt.color, bg:tt.bg, border:tt.border, left:tt.color };
-  if(task.taskType==='personal') return { color:tt.color, bg:tt.bg, border:tt.border, left:tt.color };
   const d = task.department ? DEPT[task.department] : null;
-  if(d) return { color:d.color, bg:d.bg+'dd', border:d.color+'66', left:d.color };
-  return { color:tt.color, bg:tt.bg, border:tt.border, left:tt.color };
+  if(d) return { color:d.color, bg:d.bg+'dd', border:d.color+'66', left: ul||d.color };
+  return { color:tt.color, bg:tt.bg, border:tt.border, left: ul||tt.color };
 }
 
 // ─── MIGRATION ───────────────────────────────────────────────────────────────
@@ -130,6 +142,7 @@ function migrate(list) {
     if(!tk.dependencies) tk = {...tk, dependencies:[]};
     if(tk.actualMinutes===undefined) tk = {...tk, actualMinutes:0};
     if(tk.pomodoroCount===undefined) tk = {...tk, pomodoroCount:0};
+    if(tk.dueTime===undefined) tk = {...tk, dueTime:null};
     return tk;
   });
 }
@@ -181,6 +194,7 @@ const Chip=({children,c=T2,bg='transparent',br=BD2})=>(
 function QuickAddModal({onSave, onClose}) {
   const [title,    setTitle]    = useState('');
   const [dueDate,  setDueDate]  = useState(today());
+  const [dueTime,  setDueTime]  = useState('');
   const [priority, setPriority] = useState('normal');
   const [taskType, setTaskType] = useState('work');
   const [dept,     setDept]     = useState('');
@@ -190,7 +204,7 @@ function QuickAddModal({onSave, onClose}) {
   function save() {
     if(!title.trim()) return;
     onSave({
-      id:uid(), title:title.trim(), dueDate, priority, taskType,
+      id:uid(), title:title.trim(), dueDate, dueTime:dueTime||null, priority, taskType,
       department:dept||null, status:'not_started', notes:'',
       sessions:[], important:false, rescheduleCount:0,
       createdAt:new Date().toISOString(),
@@ -233,14 +247,19 @@ function QuickAddModal({onSave, onClose}) {
           placeholder="Task name — what needs to be done?"
           style={{...F,fontSize:14,fontWeight:600,marginBottom:14,border:`1px solid ${title?tt.color+'88':BD2}`}}/>
 
-        {/* Due date + dept side by side */}
+        {/* Due date + time + dept */}
         <div style={{display:'flex',gap:10,marginBottom:14}}>
-          <div style={{flex:1}}>
+          <div style={{flex:1.2}}>
             <label style={{fontSize:10,color:T3,fontWeight:700,textTransform:'uppercase',letterSpacing:'.06em',display:'block',marginBottom:5}}>Deadline</label>
-            <input type="date" value={dueDate} onChange={e=>setDueDate(e.target.value)} style={F}/>
+            <div style={{display:'flex',gap:6}}>
+              <input type="date" value={dueDate} onChange={e=>setDueDate(e.target.value)} style={{...F,flex:1}}/>
+              <input type="text" value={dueTime} onChange={e=>setDueTime(e.target.value)} placeholder="HH:MM" maxLength={5}
+                style={{...F,width:68,flexShrink:0,color:dueTime?'#fbbf24':T3,textAlign:'center'}}/>
+            </div>
             {dueDate&&dl!==null&&(
               <div style={{fontSize:10,marginTop:3,color:dl<0?'#f87171':dl===0?'#fbbf24':T2,fontWeight:600}}>
                 {dl<0?`${-dl}d overdue`:dl===0?'Today':dl===1?'Tomorrow':`${dl} days`} — {wshort(dueDate)}, {mday(dueDate)}
+                {dueTime&&<span style={{color:'#fbbf24'}}> @ {dueTime}</span>}
               </div>
             )}
           </div>
@@ -294,6 +313,7 @@ function PlanModal({task, onSave, onDelete, onClose}) {
   const [notes,    setNotes]    = useState(task.notes||'');
   const [priority, setPriority] = useState(task.priority||'normal');
   const [dueDate,  setDueDate]  = useState(task.dueDate||today());
+  const [dueTime,  setDueTime]  = useState(task.dueTime||'');
   const [dept,     setDept]     = useState(task.department||'');
   const [important,setImportant]= useState(!!task.important);
   const [showMore, setShowMore] = useState(false);
@@ -334,7 +354,7 @@ function PlanModal({task, onSave, onDelete, onClose}) {
       ? [...(task.followUpHistory||[]), {at:newAt, note:fuNote.trim()}]
       : (task.followUpHistory||[]);
     onSave({
-      ...task, status, priority, dueDate:dueDate||null,
+      ...task, status, priority, dueDate:dueDate||null, dueTime:dueTime||null,
       department:dept||null, important, notes:notes.trim(), sessions,
       scheduledDate: sessions[0]?.date||null,
       scheduledTime: sessions[0]?.startTime||null,
@@ -811,6 +831,20 @@ function CalendarGrid({days, tasks, gcalEvents, onSlotClick, onTaskClick, typeFi
                           {d&&<span style={{color:d.color,fontWeight:700,background:d.bg+'cc',padding:'0 4px',borderRadius:2}}>{d.code}</span>}
                         </div>
                       )}
+                    </div>
+                  );
+                })}
+                {/* Deadline markers — tasks with a specific due time */}
+                {activeTasks.filter(tk=>tk.dueDate===day&&tk.dueTime&&px(tk.dueTime)!==null).map(tk=>{
+                  const top=px(tk.dueTime); if(top===null) return null;
+                  const bc=blockColor(tk); const tt=TASK_TYPES[tk.taskType||'work'];
+                  const isDeleg=!!tk.delegatedTo;
+                  return(
+                    <div key={`dl-${tk.id}`} onClick={e=>{e.stopPropagation();onTaskClick(tk);}}
+                      style={{position:'absolute',top:top-1,left:1,width:`calc(${taskW} - 3px)`,height:22,borderRadius:4,background:bc.bg,border:`1px solid ${bc.border}`,borderLeft:`3px solid ${bc.left}`,padding:'0 6px',overflow:'hidden',cursor:'pointer',zIndex:6,boxSizing:'border-box',display:'flex',alignItems:'center',gap:4}}>
+                      <span style={{fontSize:8,flexShrink:0}}>⏰</span>
+                      <span style={{fontSize:9,fontWeight:700,color:bc.color,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',flex:1}}>{isDeleg?`👤 `:''}DUE: {tk.title}</span>
+                      <span style={{fontSize:8,color:bc.left,fontWeight:700,flexShrink:0}}>{tk.dueTime}</span>
                     </div>
                   );
                 })}
