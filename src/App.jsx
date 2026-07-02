@@ -1530,7 +1530,8 @@ function DelegationView({tasks, onPlan, onUpdate}) {
 }
 
 // ─── WEEKLY REVIEW VIEW ───────────────────────────────────────────────────────
-function WeeklyReviewView({tasks, onExport}) {
+function WeeklyReviewView({tasks, onExport, onUpdate}) {
+  const [reviewTask, setReviewTask] = useState(null);
   const t=today(), wdays=weekDays(t);
   const weekStart=wdays[0], weekEnd=wdays[6];
   const lastWeekStart=addD(weekStart,-7), lastWeekEnd=addD(weekEnd,-7);
@@ -1639,16 +1640,95 @@ function WeeklyReviewView({tasks, onExport}) {
             const isOnTime=tk.dueDate&&tk.completedAt&&tk.completedAt.slice(0,10)<=tk.dueDate;
             const d=tk.department?DEPT[tk.department]:null;
             return(
-              <div key={tk.id} style={{display:'flex',gap:8,alignItems:'center',padding:'5px 0',borderBottom:`1px solid ${BD}`}}>
+              <div key={tk.id} onClick={()=>setReviewTask(tk)} style={{display:'flex',gap:8,alignItems:'center',padding:'7px 4px',borderBottom:`1px solid ${BD}`,cursor:'pointer',borderRadius:6}} onMouseEnter={e=>e.currentTarget.style.background=S2} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
                 <CheckCircle2 size={11} style={{color:isOnTime?'#34d399':'#fbbf24',flexShrink:0}}/>
                 <span style={{fontSize:12,color:T1,flex:1}}>{tk.title}</span>
                 {d&&<span style={{fontSize:9,color:d.color,fontWeight:700}}>{d.code}</span>}
                 <span style={{fontSize:10,color:isOnTime?'#34d399':'#fbbf24',fontWeight:700}}>{isOnTime?'On time':'Late'}</span>
+                <Eye size={11} style={{color:T3}}/>
               </div>
             );
           })}
+          {reviewTask&&<ReviewTaskModal task={reviewTask} onClose={()=>setReviewTask(null)} onUpdate={t=>{onUpdate&&onUpdate(t);setReviewTask(null);}}/>}
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── REVIEW TASK MODAL ────────────────────────────────────────────────────────
+function ReviewTaskModal({task, onClose, onUpdate}) {
+  const [extDays, setExtDays] = useState(3);
+
+  function reopen() {
+    onUpdate({...task, status:'in_progress', completedAt:null});
+    onClose();
+  }
+
+  function extendDue() {
+    const base = task.dueDate || today();
+    onUpdate({...task, dueDate: addD(base, extDays)});
+    onClose();
+  }
+
+  const hist = task.statusHistory || [];
+  const tp = TASK_TYPES[task.type] || TASK_TYPES.work;
+  const pr = PRIO[task.priority] || PRIO.normal;
+
+  return(
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:9999,padding:16}} onClick={onClose}>
+      <div style={{background:S1,border:`1px solid ${BD}`,borderRadius:14,padding:20,width:'100%',maxWidth:440,maxHeight:'85vh',overflowY:'auto'}} onClick={e=>e.stopPropagation()}>
+        {/* Header */}
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:14}}>
+          <div style={{flex:1,marginRight:10}}>
+            <div style={{fontSize:13,fontWeight:700,color:T1,marginBottom:4}}>{task.title}</div>
+            <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+              <span style={{fontSize:10,padding:'2px 7px',borderRadius:5,background:tp.bg,color:tp.color,border:`1px solid ${tp.border}`}}>{tp.icon} {tp.label}</span>
+              <span style={{fontSize:10,padding:'2px 7px',borderRadius:5,background:pr.bg,color:pr.dot,border:`1px solid ${pr.border}`}}>{pr.label}</span>
+              {task.department&&<span style={{fontSize:10,padding:'2px 7px',borderRadius:5,background:S2,color:T2,border:`1px solid ${BD}`}}>{task.department}</span>}
+            </div>
+          </div>
+          <button onClick={onClose} style={{background:'none',border:'none',color:T3,cursor:'pointer'}}><X size={16}/></button>
+        </div>
+
+        {/* Details */}
+        <div style={{background:S2,borderRadius:8,padding:12,marginBottom:12,fontSize:11,display:'flex',flexDirection:'column',gap:6}}>
+          {task.dueDate&&<div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:T3}}>Due Date</span><span style={{color:T2}}>{mday(task.dueDate)}</span></div>}
+          {task.completedAt&&<div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:T3}}>Completed</span><span style={{color:'#34d399'}}>{mday(task.completedAt.slice(0,10))}</span></div>}
+          {task.estimatedHours&&<div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:T3}}>Est. Hours</span><span style={{color:T2}}>{task.estimatedHours}h</span></div>}
+          {task.delegatedTo&&<div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:T3}}>Delegated To</span><span style={{color:'#67e8f9'}}>{task.delegatedTo}</span></div>}
+          {task.notes&&<div style={{marginTop:4}}><div style={{color:T3,marginBottom:3}}>Notes</div><div style={{color:T2,lineHeight:1.5}}>{task.notes}</div></div>}
+        </div>
+
+        {/* Status History */}
+        {hist.length>0&&(
+          <div style={{marginBottom:12}}>
+            <div style={{fontSize:9,color:T3,fontWeight:700,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:8}}>Status History</div>
+            {hist.map((h,i)=>(
+              <div key={i} style={{display:'flex',gap:8,alignItems:'center',marginBottom:5,fontSize:11}}>
+                <div style={{width:7,height:7,borderRadius:'50%',background:ACC,flexShrink:0}}/>
+                <span style={{color:T2,flex:1}}>{STATUS[h.status]?.label||h.status}</span>
+                <span style={{color:T3,fontSize:10}}>{h.at?h.at.slice(0,10):''}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Actions */}
+        <div style={{display:'flex',flexDirection:'column',gap:8}}>
+          <button onClick={reopen} style={{padding:'9px 14px',borderRadius:8,border:`1px solid ${ACCL}`,background:'rgba(124,58,237,.2)',color:ACCL,cursor:'pointer',fontSize:12,fontWeight:700,display:'flex',alignItems:'center',gap:6,justifyContent:'center'}}>
+            <RefreshCw size={13}/> Reopen Task (In Progress)
+          </button>
+          <div style={{display:'flex',gap:8,alignItems:'center'}}>
+            <button onClick={extendDue} style={{flex:1,padding:'9px 14px',borderRadius:8,border:`1px solid ${BD2}`,background:S2,color:T2,cursor:'pointer',fontSize:12,fontWeight:700,display:'flex',alignItems:'center',gap:6,justifyContent:'center'}}>
+              <CalendarDays size={13}/> Extend Due +{extDays}d
+            </button>
+            <select value={extDays} onChange={e=>setExtDays(+e.target.value)} style={{padding:'9px 8px',borderRadius:8,border:`1px solid ${BD}`,background:S2,color:T2,fontSize:12,cursor:'pointer'}}>
+              {[1,2,3,5,7,14,30].map(d=><option key={d} value={d}>{d}d</option>)}
+            </select>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -2042,7 +2122,7 @@ function TheNun({session, demoMode}) {
         )}
         {view==='review'&&(
           <div style={{flex:1,overflowY:'auto',padding:'14px 18px',maxWidth:640,margin:'0 auto',width:'100%'}}>
-            <WeeklyReviewView tasks={tasks} onExport={()=>setShowReport(true)}/>
+            <WeeklyReviewView tasks={tasks} onExport={()=>setShowReport(true)} onUpdate={updateTask}/>
           </div>
         )}
         {view==='insights'&&(
