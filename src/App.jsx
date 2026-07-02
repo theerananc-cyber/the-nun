@@ -451,17 +451,11 @@ function PlanModal({task, onSave, onDelete, onClose}) {
             </div>
             <div style={{flex:'1 1 90px'}}>
               <div style={{fontSize:9,color:T3,marginBottom:3}}>START</div>
-              <div style={{position:'relative'}}>
-                <input type="time" step="60" value={nsStart} onChange={e=>setNsStart(e.target.value)} style={{...F,padding:'7px 8px',width:'100%',fontFamily:'monospace'}}/>
-                {nsStart&&<span style={{position:'absolute',right:5,top:'50%',transform:'translateY(-50%)',fontSize:8,color:ACCL,pointerEvents:'none'}}>{to12h(nsStart)}</span>}
-              </div>
+              <input type="text" placeholder="09:00" maxLength={5} value={nsStart} onChange={e=>setNsStart(e.target.value)} style={{...F,padding:'7px 8px',width:'100%',fontFamily:'monospace'}}/>
             </div>
             <div style={{flex:'1 1 90px'}}>
               <div style={{fontSize:9,color:T3,marginBottom:3}}>END</div>
-              <div style={{position:'relative'}}>
-                <input type="time" step="60" value={nsEnd} onChange={e=>setNsEnd(e.target.value)} style={{...F,padding:'7px 8px',width:'100%',fontFamily:'monospace'}}/>
-                {nsEnd&&<span style={{position:'absolute',right:5,top:'50%',transform:'translateY(-50%)',fontSize:8,color:ACCL,pointerEvents:'none'}}>{to12h(nsEnd)}</span>}
-              </div>
+              <input type="text" placeholder="11:00" maxLength={5} value={nsEnd} onChange={e=>setNsEnd(e.target.value)} style={{...F,padding:'7px 8px',width:'100%',fontFamily:'monospace'}}/>
             </div>
             <button onClick={addSession} disabled={!nsDate||!nsStart} style={{padding:'7px 14px',borderRadius:7,border:`1px solid ${nsDate&&nsStart?ACCL:BD}`,background:nsDate&&nsStart?'rgba(124,58,237,.25)':'transparent',color:nsDate&&nsStart?ACCL:T3,cursor:nsDate&&nsStart?'pointer':'not-allowed',fontSize:12,fontWeight:700,flexShrink:0}}>
               Add
