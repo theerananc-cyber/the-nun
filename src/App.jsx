@@ -661,9 +661,10 @@ function InboxCard({task, onPlan, onStatusCycle, onPomodoro}) {
 
 // ─── INBOX VIEW ──────────────────────────────────────────────────────────────
 function InboxView({tasks, onPlan, onStatusCycle, onPomodoro}) {
-  const [q, setQ]   = useState('');
-  const [pf, setPf] = useState('all');
-  const [tf, setTf] = useState('all');
+  const [q, setQ]     = useState('');
+  const [pf, setPf]   = useState('all');
+  const [tf, setTf]   = useState('all');
+  const [view, setView] = useState('list');
   const t = today();
 
   const filtered = useMemo(()=>tasks.filter(tk=>{
@@ -709,17 +710,125 @@ function InboxView({tasks, onPlan, onStatusCycle, onPomodoro}) {
           </button>
         ))}
       </div>
-      <div style={{fontSize:11,color:T3}}>{filtered.length} active task{filtered.length!==1?'s':''}</div>
-      <div style={{display:'flex',flexDirection:'column',gap:5}}>
-        {filtered.length===0&&(
-          <div style={{textAlign:'center',padding:'56px 0',color:T3}}>
-            <Inbox size={30} style={{margin:'0 auto 12px',opacity:.2}}/>
-            <p style={{fontSize:13,fontWeight:600,color:T2}}>All clear!</p>
-            <p style={{fontSize:11,marginTop:4}}>No active tasks in this filter</p>
-          </div>
-        )}
-        {filtered.map(tk=><InboxCard key={tk.id} task={tk} onPlan={onPlan} onStatusCycle={onStatusCycle} onPomodoro={onPomodoro}/>)}
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <div style={{fontSize:11,color:T3}}>{view==='list'?`${filtered.length} active task${filtered.length!==1?'s':''}`:''}</div>
+        <div style={{display:'flex',gap:0,border:`1px solid ${BD2}`,borderRadius:7,overflow:'hidden'}}>
+          {[{k:'list',label:'≡ List'},{k:'board',label:'⊞ Board'}].map(v=>(
+            <button key={v.k} onClick={()=>setView(v.k)}
+              style={{padding:'4px 12px',border:'none',background:view===v.k?ACCL+'22':'transparent',color:view===v.k?ACCL:T3,fontSize:11,fontWeight:view===v.k?700:400,cursor:'pointer'}}>
+              {v.label}
+            </button>
+          ))}
+        </div>
       </div>
+      {view==='list'?(
+        <div style={{display:'flex',flexDirection:'column',gap:5}}>
+          {filtered.length===0&&(
+            <div style={{textAlign:'center',padding:'56px 0',color:T3}}>
+              <Inbox size={30} style={{margin:'0 auto 12px',opacity:.2}}/>
+              <p style={{fontSize:13,fontWeight:600,color:T2}}>All clear!</p>
+              <p style={{fontSize:11,marginTop:4}}>No active tasks in this filter</p>
+            </div>
+          )}
+          {filtered.map(tk=><InboxCard key={tk.id} task={tk} onPlan={onPlan} onStatusCycle={onStatusCycle} onPomodoro={onPomodoro}/>)}
+        </div>
+      ):(
+        <KanbanBoard tasks={tasks} onPlan={onPlan} onStatusCycle={onStatusCycle}/>
+      )}
+    </div>
+  );
+}
+
+// ─── KANBAN BOARD ────────────────────────────────────────────────────────────
+const KANBAN_COLS = [
+  { key:'not_started', label:'Not Started', color:'#94a3b8' },
+  { key:'in_progress', label:'In Progress', color:'#60a5fa' },
+  { key:'done',        label:'Done',        color:'#34d399' },
+  { key:'cancelled',   label:'Cancelled',   color:'#f87171' },
+];
+
+function KanbanCard({task, onPlan, onStatusCycle, onDragStart}) {
+  const bc = blockColor(task);
+  const dl = dueLabel(task.dueDate);
+  const tt = TASK_TYPES[task.taskType||'work'];
+  const p  = PRIO[task.priority||'normal'];
+  const d  = task.department ? DEPT[task.department] : null;
+  const isDeleg = !!task.delegatedTo;
+  return(
+    <div draggable onDragStart={e=>onDragStart(e, task.id)}
+      style={{background:S2,border:`1px solid ${BD}`,borderLeft:`3px solid ${bc.left}`,borderRadius:7,padding:'9px 11px',cursor:'grab',userSelect:'none'}}>
+      <div style={{display:'flex',gap:6,alignItems:'flex-start',marginBottom:6}}>
+        <button onClick={e=>{e.stopPropagation();onStatusCycle(task.id);}}
+          style={{flexShrink:0,marginTop:1,background:STATUS[task.status||'not_started'].bg,border:`1px solid ${STATUS[task.status||'not_started'].border}`,borderRadius:4,cursor:'pointer',color:STATUS[task.status||'not_started'].color,padding:'3px 5px',display:'flex',alignItems:'center'}}>
+          {React.createElement(STATUS[task.status||'not_started'].Icon,{size:10})}
+        </button>
+        <span style={{fontSize:12,fontWeight:600,color:task.status==='done'||task.status==='cancelled'?T3:T1,flex:1,cursor:'pointer',textDecoration:task.status==='done'||task.status==='cancelled'?'line-through':'none',lineHeight:1.4}}
+          onClick={()=>onPlan(task)}>
+          {task.important&&'★ '}{tt.icon} {task.title}
+        </span>
+      </div>
+      <div style={{display:'flex',gap:3,flexWrap:'wrap'}}>
+        {task.priority!=='normal'&&<Chip c={p.dot} bg={p.bg} br={p.border}>{p.label}</Chip>}
+        {dl&&<Chip c={dl.color} bg={`${dl.color}14`} br={`${dl.color}30`}>{dl.text}</Chip>}
+        {d&&<Chip c={d.color} bg={d.bg+'aa'} br={d.color+'44'}><Building2 size={8}/>{d.code}</Chip>}
+        {isDeleg&&<Chip c="#67e8f9" bg="rgba(103,232,249,.1)" br="rgba(103,232,249,.3)"><Users size={8}/>{task.delegatedTo}</Chip>}
+      </div>
+    </div>
+  );
+}
+
+function KanbanBoard({tasks, onPlan, onStatusCycle}) {
+  const [dragId, setDragId] = useState(null);
+  const [overCol, setOverCol] = useState(null);
+
+  function handleDragStart(e, id) {
+    setDragId(id);
+    e.dataTransfer.effectAllowed = 'move';
+  }
+  function handleDragOver(e, col) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setOverCol(col);
+  }
+  function handleDrop(e, col) {
+    e.preventDefault();
+    if(dragId && col) onStatusCycle(dragId, col);
+    setDragId(null); setOverCol(null);
+  }
+  function handleDragEnd() { setDragId(null); setOverCol(null); }
+
+  return(
+    <div style={{display:'flex',gap:10,overflowX:'auto',paddingBottom:8,alignItems:'flex-start'}}>
+      {KANBAN_COLS.map(col=>{
+        const colTasks = tasks.filter(tk=>(tk.status||'not_started')===col.key)
+          .sort((a,b)=>{
+            const pa=a.priority==='urgent'?0:a.priority==='high'?1:2;
+            const pb=b.priority==='urgent'?0:b.priority==='high'?1:2;
+            if(pa!==pb) return pa-pb;
+            return (a.dueDate||'9999').localeCompare(b.dueDate||'9999');
+          });
+        const isOver = overCol===col.key;
+        return(
+          <div key={col.key}
+            onDragOver={e=>handleDragOver(e,col.key)}
+            onDrop={e=>handleDrop(e,col.key)}
+            onDragLeave={()=>setOverCol(null)}
+            style={{flex:'0 0 240px',minWidth:240,background:isOver?`${col.color}10`:S1,border:`1px solid ${isOver?col.color:BD}`,borderTop:`3px solid ${col.color}`,borderRadius:10,padding:10,transition:'background .15s,border-color .15s'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
+              <span style={{fontSize:11,fontWeight:700,color:col.color,textTransform:'uppercase',letterSpacing:'.06em'}}>{col.label}</span>
+              <span style={{fontSize:10,background:`${col.color}22`,color:col.color,borderRadius:10,padding:'1px 7px',fontWeight:700}}>{colTasks.length}</span>
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:6,minHeight:60}}>
+              {colTasks.map(tk=>(
+                <KanbanCard key={tk.id} task={tk} onPlan={onPlan} onStatusCycle={onStatusCycle} onDragStart={handleDragStart} onDragEnd={handleDragEnd}/>
+              ))}
+              {colTasks.length===0&&(
+                <div style={{textAlign:'center',padding:'20px 0',color:T3,fontSize:11,opacity:.5}}>Drop here</div>
+              )}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -1938,14 +2047,15 @@ function TheNun({session, demoMode}) {
   }
   function showToast(msg){setToast(msg);setTimeout(()=>setToast(''),2200);}
 
-  function cycleStatus(id){
+  function cycleStatus(id, targetStatus){
     setTasks(prev=>{
       const tk=prev.find(x=>x.id===id); if(!tk) return prev;
-      const ns=STATUS[tk.status||'not_started'].next;
+      const ns=targetStatus||STATUS[tk.status||'not_started'].next;
+      if(ns===tk.status) return prev;
       const newAt=new Date().toISOString();
       const hist=[...(tk.statusHistory||[]),{status:ns,at:newAt}];
       const next=prev.map(x=>x.id===id?{...x,status:ns,statusHistory:hist,completedAt:ns==='done'?newAt:tk.completedAt||null}:x);
-      saveTasks(next); showToast(`→ ${STATUS[ns].label}`); return next;
+      saveTasks(next); next.forEach(t=>saveTaskToDB(t)); showToast(`→ ${STATUS[ns].label}`); return next;
     });
   }
 
