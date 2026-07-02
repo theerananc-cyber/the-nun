@@ -317,6 +317,9 @@ function PlanModal({task, onSave, onDelete, onClose}) {
   const [dept,     setDept]     = useState(task.department||'');
   const [important,setImportant]= useState(!!task.important);
   const [showMore, setShowMore] = useState(false);
+  const [editTitle, setEditTitle] = useState(false);
+  const [titleVal, setTitleVal] = useState(task.title||'');
+  const [editDl, setEditDl] = useState(false);
   const [confirmDel,setConfirmDel]=useState(false);
   const [estHours, setEstHours] = useState(task.estimatedHours||'');
   const [delegTo,  setDelegTo]  = useState(task.delegatedTo||'');
@@ -354,7 +357,7 @@ function PlanModal({task, onSave, onDelete, onClose}) {
       ? [...(task.followUpHistory||[]), {at:newAt, note:fuNote.trim()}]
       : (task.followUpHistory||[]);
     onSave({
-      ...task, status, priority, dueDate:dueDate||null, dueTime:dueTime||null,
+      ...task, title:titleVal.trim()||task.title, status, priority, dueDate:dueDate||null, dueTime:dueTime||null,
       department:dept||null, important, notes:notes.trim(), sessions,
       scheduledDate: sessions[0]?.date||null,
       scheduledTime: sessions[0]?.startTime||null,
@@ -393,23 +396,50 @@ function PlanModal({task, onSave, onDelete, onClose}) {
               )}
               {task.important&&<Star size={11} style={{color:'#fbbf24',fill:'#fbbf24'}}/>}
             </div>
-            <div style={{fontSize:16,fontWeight:700,color:T1,lineHeight:1.3}}>{task.title}</div>
+            {editTitle
+              ? <input autoFocus value={titleVal} onChange={e=>setTitleVal(e.target.value)}
+                  onBlur={()=>setEditTitle(false)} onKeyDown={e=>e.key==='Enter'&&setEditTitle(false)}
+                  style={{fontSize:15,fontWeight:700,color:T1,background:S2,border:`1px solid ${BD2}`,borderRadius:6,padding:'5px 8px',outline:'none',width:'100%',boxSizing:'border-box'}}/>
+              : <div style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer'}} onClick={()=>setEditTitle(true)}>
+                  <div style={{fontSize:16,fontWeight:700,color:T1,lineHeight:1.3,flex:1}}>{titleVal}</div>
+                  <span style={{fontSize:9,color:T3,border:`1px solid ${BD2}`,borderRadius:4,padding:'2px 6px',flexShrink:0}}>Edit</span>
+                </div>
+            }
           </div>
           <button onClick={onClose} style={{background:'none',border:'none',color:T3,cursor:'pointer',marginLeft:10,flexShrink:0}}><X size={15}/></button>
         </div>
 
         {/* Deadline banner */}
-        {dueDate&&(
-          <div style={{background:dl!==null&&dl<0?'rgba(248,113,113,.12)':dl===0?'rgba(251,191,36,.1)':'rgba(129,140,248,.08)',border:`1px solid ${dl!==null&&dl<0?'rgba(248,113,113,.35)':dl===0?'rgba(251,191,36,.3)':BD}`,borderRadius:8,padding:'8px 12px',marginBottom:14,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <div style={{background:dl!==null&&dl<0?'rgba(248,113,113,.12)':dl===0?'rgba(251,191,36,.1)':'rgba(129,140,248,.08)',border:`1px solid ${dl!==null&&dl<0?'rgba(248,113,113,.35)':dl===0?'rgba(251,191,36,.3)':BD}`,borderRadius:8,padding:'8px 12px',marginBottom:14}}>
+          {editDl ? (
             <div>
-              <div style={{fontSize:9,color:T3,fontWeight:700,textTransform:'uppercase',letterSpacing:'.06em'}}>Deadline</div>
-              <div style={{fontSize:13,fontWeight:700,color:T1,marginTop:1}}>{wshort(dueDate)}, {mday(dueDate)}</div>
+              <div style={{fontSize:9,color:T3,fontWeight:700,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:6}}>Deadline</div>
+              <div style={{display:'flex',gap:6,alignItems:'center'}}>
+                <input type="date" value={dueDate||''} onChange={e=>setDueDate(e.target.value)}
+                  style={{flex:1,background:S2,border:`1px solid ${BD2}`,borderRadius:6,color:T1,fontSize:13,padding:'7px 10px',outline:'none'}}/>
+                <input type="text" value={dueTime} onChange={e=>setDueTime(e.target.value)} placeholder="HH:MM" maxLength={5}
+                  style={{width:80,background:S2,border:`1px solid ${BD2}`,borderRadius:6,color:dueTime?'#fbbf24':T3,fontSize:14,padding:'7px 8px',outline:'none',textAlign:'center',letterSpacing:2}}/>
+                <button onClick={()=>setEditDl(false)} style={{background:ACC,border:'none',borderRadius:6,color:'#fff',fontSize:11,fontWeight:700,padding:'7px 12px',cursor:'pointer'}}>Done</button>
+              </div>
             </div>
-            <div style={{fontSize:20,fontWeight:800,fontFamily:'monospace',color:dl!==null&&dl<0?'#f87171':dl===0?'#fbbf24':dl!==null&&dl<=3?'#fb923c':ACCL}}>
-              {dl!==null&&dl<0?`${-dl}d LATE`:dl===0?'TODAY':dl===1?'1d left':`${dl}d left`}
+          ) : (
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <div>
+                <div style={{fontSize:9,color:T3,fontWeight:700,textTransform:'uppercase',letterSpacing:'.06em'}}>Deadline</div>
+                <div style={{fontSize:13,fontWeight:700,color:T1,marginTop:1}}>
+                  {dueDate ? `${wshort(dueDate)}, ${mday(dueDate)}` : 'No deadline'}
+                  {dueTime&&<span style={{color:'#fbbf24',marginLeft:6}}>@ {dueTime}</span>}
+                </div>
+              </div>
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <div style={{fontSize:20,fontWeight:800,fontFamily:'monospace',color:dl!==null&&dl<0?'#f87171':dl===0?'#fbbf24':dl!==null&&dl<=3?'#fb923c':ACCL}}>
+                  {dl!==null&&dl<0?`${-dl}d LATE`:dl===0?'TODAY':dl===1?'1d left':dl!==null?`${dl}d left`:''}
+                </div>
+                <button onClick={()=>setEditDl(true)} style={{fontSize:9,color:T3,border:`1px solid ${BD2}`,borderRadius:4,padding:'2px 7px',background:'transparent',cursor:'pointer'}}>Edit</button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Smart warnings */}
         {(noSessionWarning||hourWarning)&&(
@@ -902,7 +932,7 @@ function CalendarGrid({days, tasks, gcalEvents, onSlotClick, onTaskClick, typeFi
                 const bc=blockColor(tk); const d=tk.department?DEPT[tk.department]:null;
                 return(
                   <div key={tk.id} onClick={()=>onTaskClick(tk)}
-                    style={{fontSize:9,fontWeight:700,padding:'2px 5px',borderRadius:3,background:bc.bg,color:bc.color,border:`1px solid ${bc.border}`,borderLeft:`2px solid ${bc.left}`,cursor:'pointer',maxWidth:'100%',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:3}}>
+                    style={{fontSize:11,fontWeight:700,padding:'3px 7px',borderRadius:4,background:bc.bg,color:bc.color,border:`1px solid ${bc.border}`,borderLeft:`3px solid ${bc.left}`,cursor:'pointer',maxWidth:'100%',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:3}}>
                     {TASK_TYPES[tk.taskType||'work'].icon}{tk.important&&'★ '}{tk.title}{d&&<span style={{opacity:.8}}> {d.code}</span>}
                   </div>
                 );
@@ -948,16 +978,16 @@ function CalendarGrid({days, tasks, gcalEvents, onSlotClick, onTaskClick, typeFi
                   const tt=TASK_TYPES[tk.taskType||'work'];
                   return(
                     <div key={s.id} onClick={e=>{e.stopPropagation();onTaskClick(tk);}}
-                      style={{position:'absolute',top,left:1,width:`calc(${taskW} - 3px)`,height:h,borderRadius:6,background:bc.bg,border:`1px solid ${bc.border}`,borderLeft:`4px solid ${bc.left}`,padding:'3px 7px',overflow:'hidden',cursor:'pointer',zIndex:5,boxSizing:'border-box'}}>
-                      <div style={{display:'flex',alignItems:'center',gap:4,marginBottom:1}}>
-                        <st.Icon size={9} style={{color:st.color,flexShrink:0}}/>
-                        <span style={{fontSize:10,fontWeight:700,color:bc.color,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',flex:1}}>{tk.important&&'★ '}{tk.title}</span>
-                        <span style={{fontSize:10,flexShrink:0}}>{tt.icon}</span>
+                      style={{position:'absolute',top,left:1,width:`calc(${taskW} - 3px)`,height:h,borderRadius:6,background:bc.bg,border:`1px solid ${bc.border}`,borderLeft:`4px solid ${bc.left}`,padding:'4px 8px',overflow:'hidden',cursor:'pointer',zIndex:5,boxSizing:'border-box'}}>
+                      <div style={{display:'flex',alignItems:'center',gap:4,marginBottom:2}}>
+                        <st.Icon size={10} style={{color:st.color,flexShrink:0}}/>
+                        <span style={{fontSize:12,fontWeight:700,color:bc.color,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',flex:1}}>{tk.important&&'★ '}{tk.title}</span>
+                        <span style={{fontSize:11,flexShrink:0}}>{tt.icon}</span>
                       </div>
-                      {h>28&&(
-                        <div style={{fontSize:9,color:T2,fontFamily:'monospace',display:'flex',gap:6,alignItems:'center'}}>
+                      {h>30&&(
+                        <div style={{fontSize:11,color:T2,fontFamily:'monospace',display:'flex',gap:6,alignItems:'center'}}>
                           <span>{to12h(s.startTime)}{s.endTime?` → ${to12h(s.endTime)}`:''}</span>
-                          {d&&<span style={{color:d.color,fontWeight:700,background:d.bg+'cc',padding:'0 4px',borderRadius:2}}>{d.code}</span>}
+                          {d&&<span style={{color:d.color,fontWeight:700,background:d.bg+'cc',padding:'1px 5px',borderRadius:2}}>{d.code}</span>}
                         </div>
                       )}
                     </div>
@@ -981,9 +1011,9 @@ function CalendarGrid({days, tasks, gcalEvents, onSlotClick, onTaskClick, typeFi
                   const top=px(ev.startTime); if(top===null) return null;
                   const h=bh(ev.startTime,ev.endTime);
                   return(
-                    <div key={ev.id} style={{position:'absolute',top,left:`calc(${taskW} + 1px)`,width:'calc(42% - 2px)',height:h,borderRadius:5,background:'rgba(16,185,129,.13)',border:'1px solid rgba(16,185,129,.35)',borderLeft:`3px solid ${GCAL}`,padding:'3px 5px',overflow:'hidden',zIndex:5,boxSizing:'border-box'}}>
-                      <div style={{fontSize:10,fontWeight:700,color:GCAL,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ev.title}</div>
-                      {h>28&&<div style={{fontSize:9,color:'rgba(16,185,129,.7)',fontFamily:'monospace'}}>{to12h(ev.startTime)}{ev.endTime?` → ${to12h(ev.endTime)}`:''}</div>}
+                    <div key={ev.id} style={{position:'absolute',top,left:`calc(${taskW} + 1px)`,width:'calc(42% - 2px)',height:h,borderRadius:5,background:'rgba(16,185,129,.13)',border:'1px solid rgba(16,185,129,.35)',borderLeft:`3px solid ${GCAL}`,padding:'4px 7px',overflow:'hidden',zIndex:5,boxSizing:'border-box'}}>
+                      <div style={{fontSize:12,fontWeight:700,color:GCAL,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ev.title}</div>
+                      {h>30&&<div style={{fontSize:11,color:'rgba(16,185,129,.8)',fontFamily:'monospace',marginTop:1}}>{to12h(ev.startTime)}{ev.endTime?` → ${to12h(ev.endTime)}`:''}</div>}
                     </div>
                   );
                 })}
