@@ -12,7 +12,7 @@ import {
   MessageSquare, Target, Activity, RefreshCw
 } from "lucide-react";
 import { DEMO_MODE, supabase } from "./lib/supabase.js";
-import { loadTasks, saveTasks } from "./lib/storage.js";
+import { loadTasks, saveTasks, loadTasksFromDB, saveTaskToDB, deleteTaskFromDB } from "./lib/storage.js";
 
 // ─── THEME ───────────────────────────────────────────────────────────────────
 const BG   = "#0a0a14";
@@ -1814,15 +1814,16 @@ function TheNun({session, demoMode}) {
   const gcal = useGoogleCalendar();
 
   useEffect(()=>{
-    const raw=loadTasks(), migrated=migrate(raw);
-    // auto-reschedule overdue deadlines
-    const t=today(), updated=migrated.map(tk=>{
-      if((tk.status==='not_started'||tk.status==='in_progress')&&tk.dueDate&&tk.dueDate<t){
-        return{...tk,dueDate:addD(t,1),rescheduleCount:(tk.rescheduleCount||0)+1};
-      }
-      return tk;
+    loadTasksFromDB().then(raw=>{
+      const migrated=migrate(raw);
+      const t=today(), updated=migrated.map(tk=>{
+        if((tk.status==='not_started'||tk.status==='in_progress')&&tk.dueDate&&tk.dueDate<t){
+          return{...tk,dueDate:addD(t,1),rescheduleCount:(tk.rescheduleCount||0)+1};
+        }
+        return tk;
+      });
+      setTasks(updated); saveTasks(updated); setReady(true);
     });
-    setTasks(updated); saveTasks(updated); setReady(true);
   },[]);
   useEffect(()=>{const i=setInterval(()=>setNow(new Date()),30000);return()=>clearInterval(i);},[]);
   useEffect(()=>{
@@ -1831,7 +1832,11 @@ function TheNun({session, demoMode}) {
     gcal.fetchEvents(gcal.gcalToken,days[0],days[days.length-1]);
   },[gcal.gcalToken,selDate,calView]);
 
-  function persist(next){setTasks(next);saveTasks(next);}
+  function persist(next, deleted){
+    setTasks(next); saveTasks(next);
+    next.forEach(t => saveTaskToDB(t));
+    if(deleted) deleteTaskFromDB(deleted);
+  }
   function showToast(msg){setToast(msg);setTimeout(()=>setToast(''),2200);}
 
   function cycleStatus(id){
@@ -1847,7 +1852,7 @@ function TheNun({session, demoMode}) {
 
   function quickAdd(data){persist([...tasks,data]);setQuickOpen(false);showToast(data.delegatedTo?`Delegated to ${data.delegatedTo} ✓`:'Added to inbox ✓');}
   function savePlan(data){persist(tasks.map(t=>t.id===data.id?data:t));setPlanTask(null);showToast('Saved ✓');}
-  function deleteTk(id){persist(tasks.filter(t=>t.id!==id));setPlanTask(null);showToast('Deleted');}
+  function deleteTk(id){persist(tasks.filter(t=>t.id!==id), id);setPlanTask(null);showToast('Deleted');}
   function updateTask(data){persist(tasks.map(t=>t.id===data.id?data:t));showToast('Updated ✓');}
 
   function saveMood(m){ setMood(m); localStorage.setItem('thenun:mood:'+today(), m); }
