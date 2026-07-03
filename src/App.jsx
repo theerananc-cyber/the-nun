@@ -2273,7 +2273,7 @@ function TheNun({session, demoMode}) {
   if(!ready) return <Splash/>;
 
   return(
-    <div style={{minHeight:'100vh',height:'100vh',background:BG,color:T1,fontFamily:"'Inter',system-ui,sans-serif",display:'flex',flexDirection:'column',overflow:'hidden'}}>
+    <div style={{minHeight:'100vh',height:'100vh',background:BG,color:T1,fontFamily:"'Inter',system-ui,sans-serif",display:'flex',flexDirection:'column',overflow:'hidden',paddingTop:'env(safe-area-inset-top)',paddingBottom:'env(safe-area-inset-bottom)',paddingLeft:'env(safe-area-inset-left)',paddingRight:'env(safe-area-inset-right)'}}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         *{box-sizing:border-box;margin:0;padding:0;}
