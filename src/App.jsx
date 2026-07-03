@@ -178,6 +178,21 @@ function useGoogleCalendar() {
   }
   function connect(){
     if(!clientId){alert('Add VITE_GOOGLE_CLIENT_ID to .env');return;}
+    // iOS PWA (standalone) runs in WKWebView — Google blocks OAuth there.
+    // Open auth in real Safari instead.
+    const isIosPwa = navigator.standalone && /iphone|ipad|ipod/i.test(navigator.userAgent);
+    if(isIosPwa){
+      const params=new URLSearchParams({
+        client_id:clientId,
+        redirect_uri:window.location.origin,
+        response_type:'token',
+        scope:'https://www.googleapis.com/auth/calendar.readonly',
+        prompt:'consent',
+      });
+      window.open('https://accounts.google.com/o/oauth2/v2/auth?'+params.toString(),'_blank');
+      alert('Safari จะเปิดขึ้นมา ให้ล็อกอิน Google แล้วกลับมาที่แอปแล้วกด Connect อีกครั้ง');
+      return;
+    }
     if(!window.google){alert('Refresh page first');return;}
     window.google.accounts.oauth2.initTokenClient({
       client_id:clientId, scope:'https://www.googleapis.com/auth/calendar.readonly',
