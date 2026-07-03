@@ -149,7 +149,17 @@ function migrate(list) {
 
 // ─── GOOGLE CALENDAR ─────────────────────────────────────────────────────────
 function useGoogleCalendar() {
-  const [gcalToken,  setGcalToken]  = useState(()=>sessionStorage.getItem('gcal_token'));
+  const [gcalToken,  setGcalToken]  = useState(()=>{
+    // Check URL hash for access_token (redirect flow from iOS PWA)
+    const hash = new URLSearchParams(window.location.hash.slice(1));
+    const tokenFromHash = hash.get('access_token');
+    if(tokenFromHash){
+      sessionStorage.setItem('gcal_token', tokenFromHash);
+      window.history.replaceState(null,'',window.location.pathname);
+      return tokenFromHash;
+    }
+    return sessionStorage.getItem('gcal_token');
+  });
   const [gcalEvents, setGcalEvents] = useState([]);
   const [gcalLoad,   setGcalLoad]   = useState(false);
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
@@ -178,19 +188,17 @@ function useGoogleCalendar() {
   }
   function connect(){
     if(!clientId){alert('Add VITE_GOOGLE_CLIENT_ID to .env');return;}
-    // iOS PWA (standalone) runs in WKWebView — Google blocks OAuth there.
-    // Open auth in real Safari instead.
     const isIosPwa = navigator.standalone && /iphone|ipad|ipod/i.test(navigator.userAgent);
     if(isIosPwa){
+      // iOS PWA WKWebView blocks Google OAuth popup — use redirect flow instead
       const params=new URLSearchParams({
         client_id:clientId,
-        redirect_uri:window.location.origin,
+        redirect_uri:window.location.origin+'/',
         response_type:'token',
         scope:'https://www.googleapis.com/auth/calendar.readonly',
         prompt:'consent',
       });
-      window.open('https://accounts.google.com/o/oauth2/v2/auth?'+params.toString(),'_blank');
-      alert('Safari จะเปิดขึ้นมา ให้ล็อกอิน Google แล้วกลับมาที่แอปแล้วกด Connect อีกครั้ง');
+      window.location.href='https://accounts.google.com/o/oauth2/v2/auth?'+params.toString();
       return;
     }
     if(!window.google){alert('Refresh page first');return;}
