@@ -716,10 +716,12 @@ function InboxView({tasks, onPlan, onStatusCycle, onPomodoro}) {
     if(q.trim()){const s=q.toLowerCase();return(tk.title||'').toLowerCase().includes(s);}
     return true;
   }).sort((a,b)=>{
+    const da=a.dueDate||'9999';
+    const db=b.dueDate||'9999';
+    if(da!==db) return da.localeCompare(db);
     const pa=a.priority==='urgent'?0:a.priority==='high'?1:2;
     const pb=b.priority==='urgent'?0:b.priority==='high'?1:2;
-    if(pa!==pb) return pa-pb;
-    return (a.dueDate||'9999').localeCompare(b.dueDate||'9999');
+    return pa-pb;
   }),[tasks,q,pf,tf,t]);
 
   const overdue  = tasks.filter(tk=>tk.status!=='done'&&tk.status!=='cancelled'&&tk.dueDate&&tk.dueDate<t).length;
