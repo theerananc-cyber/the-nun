@@ -2222,10 +2222,10 @@ function NotesView({notes, onAdd, onUpdate, onDelete}) {
   const isMobile = window.innerWidth < 640;
 
   return (
-    <div style={{display:'flex',height:'100%',overflow:'hidden'}}>
-      {/* LIST PANEL */}
+    <div style={{display:'flex',height:'100%',overflow:'hidden',flexDirection:'row-reverse'}}>
+      {/* LIST PANEL (right side) */}
       {(showList||!isMobile) && (
-        <div style={{width:isMobile?'100%':260,flexShrink:0,borderRight:`1px solid ${BD}`,display:'flex',flexDirection:'column',background:S1}}>
+        <div style={{width:isMobile?'100%':260,flexShrink:0,borderLeft:`1px solid ${BD}`,display:'flex',flexDirection:'column',background:S1}}>
           <div style={{padding:'10px 12px',borderBottom:`1px solid ${BD}`,display:'flex',gap:8,alignItems:'center'}}>
             <div style={{flex:1,display:'flex',alignItems:'center',gap:6,background:S2,border:`1px solid ${BD}`,borderRadius:8,padding:'5px 10px'}}>
               <Search size={12} color={T3}/>
