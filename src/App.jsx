@@ -2222,7 +2222,53 @@ function NotesView({notes, onAdd, onUpdate, onDelete}) {
   const isMobile = window.innerWidth < 640;
 
   return (
-    <div style={{display:'flex',height:'100%',overflow:'hidden',flexDirection:'row-reverse'}}>
+    <div style={{display:'flex',width:'100%',height:'100%',overflow:'hidden'}}>
+      {/* EDITOR PANEL (left) — rendered first so list stays right */}
+      {(!showList||!isMobile) && (
+        <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',background:sel?.color||BG}}>
+          {sel ? (<>
+            <div style={{padding:'8px 14px',borderBottom:`1px solid ${BD}`,display:'flex',alignItems:'center',gap:8,flexShrink:0,flexWrap:'wrap'}}>
+              {isMobile&&(<button onClick={()=>setShowList(true)} style={{background:'none',border:'none',color:T2,cursor:'pointer',padding:4}}><ChevronLeft size={16}/></button>)}
+              <input defaultValue={sel.title} key={sel.id+'t'} onChange={onTitleChange} style={{flex:1,background:'none',border:'none',outline:'none',color:T1,fontSize:15,fontWeight:700,minWidth:80}} placeholder="Title..."/>
+              <select value={sel.tag||''} onChange={e=>changeTag(e.target.value)} style={{background:S2,border:`1px solid ${BD}`,borderRadius:6,color:sel.tag?TAG_COLORS[sel.tag]:T3,fontSize:10,padding:'3px 6px',cursor:'pointer'}}>
+                {TAGS.map(t=><option key={t} value={t}>{t||'No tag'}</option>)}
+              </select>
+              <div style={{display:'flex',gap:4}}>
+                {NOTE_COLORS.map((c,i)=>(<button key={c} title={NOTE_COLOR_LABELS[i]} onClick={()=>changeColor(c)} style={{width:14,height:14,borderRadius:'50%',background:c,border:`2px solid ${sel.color===c?T1:BD2}`,cursor:'pointer',padding:0}}/>))}
+              </div>
+              <button onClick={()=>{if(window.confirm('Delete this note?')){onDelete(sel.id);setSelId(null);setShowList(true);}}} style={{background:'none',border:'none',color:'#f87171',cursor:'pointer',padding:4}}><Trash2 size={14}/></button>
+            </div>
+            <div style={{padding:'5px 14px',borderBottom:`1px solid ${BD}`,display:'flex',gap:4,flexWrap:'wrap',flexShrink:0,background:S2+'aa'}}>
+              {[{label:'B',cmd:'bold',style:{fontWeight:700}},{label:'I',cmd:'italic',style:{fontStyle:'italic'}},{label:'S',cmd:'strikeThrough',style:{textDecoration:'line-through'}},{label:'U',cmd:'underline',style:{textDecoration:'underline'}}].map(b=>(<button key={b.cmd} onMouseDown={e=>{e.preventDefault();exec(b.cmd);}} style={{...b.style,background:S3,border:`1px solid ${BD2}`,color:T1,borderRadius:5,padding:'3px 8px',cursor:'pointer',fontSize:12,minWidth:28}}>{b.label}</button>))}
+              <div style={{width:1,background:BD2,margin:'0 2px'}}/>
+              {[['H1','formatBlock','h1'],['H2','formatBlock','h2']].map(([l,c,v])=>(<button key={l} onMouseDown={e=>{e.preventDefault();exec(c,v);}} style={{background:S3,border:`1px solid ${BD2}`,color:ACCL,borderRadius:5,padding:'3px 7px',cursor:'pointer',fontSize:11,fontWeight:700}}>{l}</button>))}
+              <div style={{width:1,background:BD2,margin:'0 2px'}}/>
+              <button onMouseDown={e=>{e.preventDefault();exec('insertUnorderedList');}} style={{background:S3,border:`1px solid ${BD2}`,color:T1,borderRadius:5,padding:'3px 7px',cursor:'pointer',fontSize:12}}>• List</button>
+              <button onMouseDown={e=>{e.preventDefault();exec('insertOrderedList');}} style={{background:S3,border:`1px solid ${BD2}`,color:T1,borderRadius:5,padding:'3px 7px',cursor:'pointer',fontSize:12}}>1. List</button>
+              <button onMouseDown={e=>{e.preventDefault();exec('insertHTML','<input type="checkbox"> ');}} style={{background:S3,border:`1px solid ${BD2}`,color:'#34d399',borderRadius:5,padding:'3px 7px',cursor:'pointer',fontSize:12}}>☑ Check</button>
+              <div style={{width:1,background:BD2,margin:'0 2px'}}/>
+              <label title="Text color" style={{position:'relative',display:'flex',alignItems:'center',cursor:'pointer'}}>
+                <span style={{background:S3,border:`1px solid ${BD2}`,borderRadius:5,padding:'3px 7px',fontSize:11,color:T1,display:'flex',alignItems:'center',gap:4}}>A <span style={{display:'inline-block',width:10,height:4,background:'currentColor',borderRadius:1}}/></span>
+                <input type="color" defaultValue="#ffffff" onInput={e=>{exec('foreColor',e.target.value);}} style={{position:'absolute',opacity:0,width:'100%',height:'100%',cursor:'pointer'}}/>
+              </label>
+              <label title="Highlight" style={{position:'relative',display:'flex',alignItems:'center',cursor:'pointer'}}>
+                <span style={{background:S3,border:`1px solid ${BD2}`,borderRadius:5,padding:'3px 7px',fontSize:11,color:'#fbbf24',display:'flex',alignItems:'center',gap:4}}>HL</span>
+                <input type="color" defaultValue="#fbbf24" onInput={e=>{exec('hiliteColor',e.target.value);}} style={{position:'absolute',opacity:0,width:'100%',height:'100%',cursor:'pointer'}}/>
+              </label>
+              <button onMouseDown={e=>{e.preventDefault();exec('removeFormat');}} style={{background:S3,border:`1px solid ${BD2}`,color:T3,borderRadius:5,padding:'3px 7px',cursor:'pointer',fontSize:11}}>✕ fmt</button>
+            </div>
+            <div ref={editorRef} contentEditable suppressContentEditableWarning onInput={onEditorInput} data-placeholder="Start typing your note here..." style={{flex:1,overflowY:'auto',padding:'16px 20px',outline:'none',color:T1,fontSize:14,lineHeight:1.7,caretColor:ACCL}}/>
+            <div style={{padding:'4px 14px',fontSize:10,color:T3,borderTop:`1px solid ${BD}`,flexShrink:0}}>Saved · {new Date(sel.updatedAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
+          </>):(
+            <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12,color:T3}}>
+              <div style={{fontSize:32}}>📝</div>
+              <div style={{fontSize:13}}>Select a note or create new one</div>
+              <button onClick={newNote} style={{padding:'8px 20px',borderRadius:8,background:ACC,border:'none',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>+ New Note</button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* LIST PANEL (right side) */}
       {(showList||!isMobile) && (
         <div style={{width:isMobile?'100%':260,flexShrink:0,borderLeft:`1px solid ${BD}`,display:'flex',flexDirection:'column',background:S1}}>
@@ -2251,107 +2297,6 @@ function NotesView({notes, onAdd, onUpdate, onDelete}) {
         </div>
       )}
 
-      {/* EDITOR PANEL */}
-      {(!showList||!isMobile) && (
-        <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',background:sel?.color||BG}}>
-          {sel ? (<>
-            {/* Editor header */}
-            <div style={{padding:'8px 14px',borderBottom:`1px solid ${BD}`,display:'flex',alignItems:'center',gap:8,flexShrink:0,flexWrap:'wrap'}}>
-              {isMobile&&(
-                <button onClick={()=>setShowList(true)} style={{background:'none',border:'none',color:T2,cursor:'pointer',padding:4}}>
-                  <ChevronLeft size={16}/>
-                </button>
-              )}
-              <input defaultValue={sel.title} key={sel.id+'t'} onChange={onTitleChange}
-                style={{flex:1,background:'none',border:'none',outline:'none',color:T1,fontSize:15,fontWeight:700,minWidth:80}}
-                placeholder="Title..."/>
-              {/* Tag selector */}
-              <select value={sel.tag||''} onChange={e=>changeTag(e.target.value)}
-                style={{background:S2,border:`1px solid ${BD}`,borderRadius:6,color:sel.tag?TAG_COLORS[sel.tag]:T3,fontSize:10,padding:'3px 6px',cursor:'pointer'}}>
-                {TAGS.map(t=><option key={t} value={t}>{t||'No tag'}</option>)}
-              </select>
-              {/* Note color dots */}
-              <div style={{display:'flex',gap:4}}>
-                {NOTE_COLORS.map((c,i)=>(
-                  <button key={c} title={NOTE_COLOR_LABELS[i]} onClick={()=>changeColor(c)}
-                    style={{width:14,height:14,borderRadius:'50%',background:c,border:`2px solid ${sel.color===c?T1:BD2}`,cursor:'pointer',padding:0}}/>
-                ))}
-              </div>
-              <button onClick={()=>{if(window.confirm('Delete this note?')){onDelete(sel.id);setSelId(null);setShowList(true);}}}
-                style={{background:'none',border:'none',color:'#f87171',cursor:'pointer',padding:4}}>
-                <Trash2 size={14}/>
-              </button>
-            </div>
-
-            {/* Toolbar */}
-            <div style={{padding:'5px 14px',borderBottom:`1px solid ${BD}`,display:'flex',gap:4,flexWrap:'wrap',flexShrink:0,background:S2+'aa'}}>
-              {[
-                {label:'B',cmd:'bold',style:{fontWeight:700}},
-                {label:'I',cmd:'italic',style:{fontStyle:'italic'}},
-                {label:'S',cmd:'strikeThrough',style:{textDecoration:'line-through'}},
-                {label:'U',cmd:'underline',style:{textDecoration:'underline'}},
-              ].map(b=>(
-                <button key={b.cmd} onMouseDown={e=>{e.preventDefault();exec(b.cmd);}}
-                  style={{...b.style,background:S3,border:`1px solid ${BD2}`,color:T1,borderRadius:5,padding:'3px 8px',cursor:'pointer',fontSize:12,minWidth:28}}>
-                  {b.label}
-                </button>
-              ))}
-              <div style={{width:1,background:BD2,margin:'0 2px'}}/>
-              {[['H1','formatBlock','h1'],['H2','formatBlock','h2']].map(([l,c,v])=>(
-                <button key={l} onMouseDown={e=>{e.preventDefault();exec(c,v);}}
-                  style={{background:S3,border:`1px solid ${BD2}`,color:ACCL,borderRadius:5,padding:'3px 7px',cursor:'pointer',fontSize:11,fontWeight:700}}>
-                  {l}
-                </button>
-              ))}
-              <div style={{width:1,background:BD2,margin:'0 2px'}}/>
-              <button onMouseDown={e=>{e.preventDefault();exec('insertUnorderedList');}}
-                style={{background:S3,border:`1px solid ${BD2}`,color:T1,borderRadius:5,padding:'3px 7px',cursor:'pointer',fontSize:12}}>• List</button>
-              <button onMouseDown={e=>{e.preventDefault();exec('insertOrderedList');}}
-                style={{background:S3,border:`1px solid ${BD2}`,color:T1,borderRadius:5,padding:'3px 7px',cursor:'pointer',fontSize:12}}>1. List</button>
-              <button onMouseDown={e=>{e.preventDefault();exec('insertHTML','<input type="checkbox"> ');}}
-                style={{background:S3,border:`1px solid ${BD2}`,color:'#34d399',borderRadius:5,padding:'3px 7px',cursor:'pointer',fontSize:12}}>☑ Check</button>
-              <div style={{width:1,background:BD2,margin:'0 2px'}}/>
-              {/* Text color */}
-              <label title="Text color" style={{position:'relative',display:'flex',alignItems:'center',cursor:'pointer'}}>
-                <span style={{background:S3,border:`1px solid ${BD2}`,borderRadius:5,padding:'3px 7px',fontSize:11,color:T1,display:'flex',alignItems:'center',gap:4}}>
-                  A <span style={{display:'inline-block',width:10,height:4,background:'currentColor',borderRadius:1}}/>
-                </span>
-                <input type="color" defaultValue="#ffffff" onInput={e=>{exec('foreColor',e.target.value);}}
-                  style={{position:'absolute',opacity:0,width:'100%',height:'100%',cursor:'pointer'}}/>
-              </label>
-              {/* Highlight color */}
-              <label title="Highlight" style={{position:'relative',display:'flex',alignItems:'center',cursor:'pointer'}}>
-                <span style={{background:S3,border:`1px solid ${BD2}`,borderRadius:5,padding:'3px 7px',fontSize:11,color:'#fbbf24',display:'flex',alignItems:'center',gap:4}}>
-                  HL
-                </span>
-                <input type="color" defaultValue="#fbbf24" onInput={e=>{exec('hiliteColor',e.target.value);}}
-                  style={{position:'absolute',opacity:0,width:'100%',height:'100%',cursor:'pointer'}}/>
-              </label>
-              <button onMouseDown={e=>{e.preventDefault();exec('removeFormat');}}
-                style={{background:S3,border:`1px solid ${BD2}`,color:T3,borderRadius:5,padding:'3px 7px',cursor:'pointer',fontSize:11}}>✕ fmt</button>
-            </div>
-
-            {/* Editor body */}
-            <div
-              ref={editorRef}
-              contentEditable
-              suppressContentEditableWarning
-              onInput={onEditorInput}
-              data-placeholder="Start typing your note here..."
-              style={{flex:1,overflowY:'auto',padding:'16px 20px',outline:'none',color:T1,fontSize:14,lineHeight:1.7,caretColor:ACCL}}
-            />
-            <div style={{padding:'4px 14px',fontSize:10,color:T3,borderTop:`1px solid ${BD}`,flexShrink:0}}>
-              Saved · {new Date(sel.updatedAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}
-            </div>
-          </>):(
-            <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12,color:T3}}>
-              <div style={{fontSize:32}}>📝</div>
-              <div style={{fontSize:13}}>Select a note or create new one</div>
-              <button onClick={newNote} style={{padding:'8px 20px',borderRadius:8,background:ACC,border:'none',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>+ New Note</button>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }
