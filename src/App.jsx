@@ -1022,21 +1022,22 @@ function CalendarGrid({days, tasks, gcalEvents, onSlotClick, onTaskClick, onGcal
       </div>
 
       {/* Due row — deadlines without a scheduled session */}
-      <div style={{display:'flex',flexShrink:0,borderBottom:`1px solid ${BD}`,minHeight:30,background:BG}}>
-        <div style={{width:52,flexShrink:0,borderRight:`1px solid ${BD}`,display:'flex',alignItems:'center',justifyContent:'center'}}>
+      <div style={{display:'flex',flexShrink:0,borderBottom:`1px solid ${BD}`,background:BG}}>
+        <div style={{width:52,flexShrink:0,borderRight:`1px solid ${BD}`,display:'flex',alignItems:'flex-start',justifyContent:'center',paddingTop:6}}>
           <span style={{fontSize:8,color:T3,fontWeight:700}}>DUE</span>
         </div>
         {days.map(day=>{
           const dl=tasks.filter(tk=>tk.dueDate===day&&tk.status!=='done'&&tk.status!=='cancelled'&&(typeFilter.length===0||typeFilter.includes(tk.taskType||'work')));
           const isLate=day<t;
           return(
-            <div key={day} style={{flex:1,borderRight:`1px solid ${BD}`,padding:'3px 3px',display:'flex',flexWrap:'wrap',gap:2,alignContent:'flex-start',background:isLate&&dl.length>0?'rgba(248,113,113,.04)':'transparent'}}>
+            <div key={day} style={{flex:1,borderRight:`1px solid ${BD}`,padding:'3px 3px',maxHeight:84,overflowY:'auto',display:'flex',flexDirection:'column',gap:2,background:isLate&&dl.length>0?'rgba(248,113,113,.04)':'transparent'}}>
               {dl.map(tk=>{
-                const bc=blockColor(tk); const d=tk.department?DEPT[tk.department]:null;
+                const bc=blockColor(tk);
                 return(
                   <div key={tk.id} onClick={()=>onTaskClick(tk)}
-                    style={{fontSize:11,fontWeight:700,padding:'3px 7px',borderRadius:4,background:bc.bg,color:bc.color,border:`1px solid ${bc.border}`,borderLeft:`3px solid ${bc.left}`,cursor:'pointer',maxWidth:'100%',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:3}}>
-                    {TASK_TYPES[tk.taskType||'work'].icon}{tk.important&&'★ '}{tk.title}{d&&<span style={{opacity:.8}}> {d.code}</span>}
+                    style={{fontSize:10,fontWeight:600,padding:'2px 6px',borderRadius:4,background:bc.bg,color:bc.color,border:`1px solid ${bc.border}`,borderLeft:`3px solid ${bc.left}`,cursor:'pointer',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:3,flexShrink:0}}>
+                    <span style={{fontSize:9}}>{TASK_TYPES[tk.taskType||'work'].icon}</span>
+                    <span style={{overflow:'hidden',textOverflow:'ellipsis'}}>{tk.important&&'★ '}{tk.title}</span>
                   </div>
                 );
               })}
