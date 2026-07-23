@@ -2337,6 +2337,7 @@ function NotesView({notes, onAdd, onUpdate, onDelete}) {
               contentEditable
               suppressContentEditableWarning
               onInput={onEditorInput}
+              data-placeholder="Start typing your note here..."
               style={{flex:1,overflowY:'auto',padding:'16px 20px',outline:'none',color:T1,fontSize:14,lineHeight:1.7,caretColor:ACCL}}
             />
             <div style={{padding:'4px 14px',fontSize:10,color:T3,borderTop:`1px solid ${BD}`,flexShrink:0}}>
@@ -2503,6 +2504,7 @@ function TheNun({session, demoMode}) {
         @keyframes spin{to{transform:rotate(360deg)}}
         input[type=date]::-webkit-calendar-picker-indicator,
         input[type=time]::-webkit-calendar-picker-indicator{filter:invert(.5);}
+        [contenteditable][data-placeholder]:empty:before{content:attr(data-placeholder);color:${T3};pointer-events:none;}
       `}</style>
 
       {/* HEADER */}
