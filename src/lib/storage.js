@@ -51,3 +51,19 @@ export async function deleteProjectFromDB(id) {
   if (DEMO_MODE) return;
   await supabase.from("projects").delete().eq("id", id);
 }
+
+const NOTES_KEY = "thenun:notes";
+export async function loadNotesFromDB() {
+  if (DEMO_MODE) { try{return JSON.parse(localStorage.getItem(NOTES_KEY)||'[]');}catch{return[];} }
+  const { data, error } = await supabase.from("notes").select("id, data");
+  if (error) { console.error(error); try{return JSON.parse(localStorage.getItem(NOTES_KEY)||'[]');}catch{return[];} }
+  return data.map(r => r.data);
+}
+export async function saveNoteToDB(note) {
+  if (DEMO_MODE) return;
+  await supabase.from("notes").upsert({ id: note.id, data: note });
+}
+export async function deleteNoteFromDB(id) {
+  if (DEMO_MODE) return;
+  await supabase.from("notes").delete().eq("id", id);
+}

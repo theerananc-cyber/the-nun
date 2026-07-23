@@ -12,7 +12,7 @@ import {
   MessageSquare, Target, Activity, RefreshCw
 } from "lucide-react";
 import { DEMO_MODE, supabase } from "./lib/supabase.js";
-import { loadTasks, saveTasks, loadTasksFromDB, saveTaskToDB, deleteTaskFromDB } from "./lib/storage.js";
+import { loadTasks, saveTasks, loadTasksFromDB, saveTaskToDB, deleteTaskFromDB, loadNotesFromDB, saveNoteToDB, deleteNoteFromDB } from "./lib/storage.js";
 
 // ─── THEME ───────────────────────────────────────────────────────────────────
 const BG   = "#0a0a14";
@@ -2152,6 +2152,209 @@ export default function App() {
   return <TheNun demoMode={DEMO_MODE}/>;
 }
 
+// ─── NOTES ───────────────────────────────────────────────────────────────────
+const NOTE_COLORS = ['#1e1e38','#1a2a1a','#2a1a1a','#1a1a2a','#2a2a1a','#1a2a2a','#2a1a2a'];
+const NOTE_COLOR_LABELS = ['Default','Forest','Ruby','Ocean','Gold','Teal','Grape'];
+
+function NotesView({notes, onAdd, onUpdate, onDelete}) {
+  const [selId, setSelId] = useState(null);
+  const [q, setQ] = useState('');
+  const [showList, setShowList] = useState(true);
+  const editorRef = React.useRef(null);
+  const saveTimer = React.useRef(null);
+
+  const sel = notes.find(n=>n.id===selId)||null;
+
+  const filtered = useMemo(()=>{
+    if(!q.trim()) return [...notes].sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
+    const s=q.toLowerCase();
+    return notes.filter(n=>(n.title||'').toLowerCase().includes(s)||(n.content||'').replace(/<[^>]+>/g,'').toLowerCase().includes(s))
+      .sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
+  },[notes,q]);
+
+  function newNote(){
+    const n={id:uid(),title:'Untitled',content:'',color:NOTE_COLORS[0],tag:'',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+    onAdd(n); setSelId(n.id); setShowList(false);
+    setTimeout(()=>{if(editorRef.current){editorRef.current.focus();}},100);
+  }
+
+  function autosave(field, val){
+    if(!sel) return;
+    clearTimeout(saveTimer.current);
+    saveTimer.current=setTimeout(()=>{ onUpdate({...sel,[field]:val,updatedAt:new Date().toISOString()}); },600);
+  }
+
+  function exec(cmd,val=null){
+    editorRef.current?.focus();
+    document.execCommand(cmd,false,val);
+  }
+
+  function onEditorInput(){
+    autosave('content', editorRef.current?.innerHTML||'');
+  }
+
+  function onTitleChange(e){
+    if(!sel) return;
+    clearTimeout(saveTimer.current);
+    saveTimer.current=setTimeout(()=>{ onUpdate({...sel,title:e.target.value,updatedAt:new Date().toISOString()}); },400);
+  }
+
+  function changeColor(c){
+    if(!sel) return;
+    onUpdate({...sel,color:c,updatedAt:new Date().toISOString()});
+  }
+
+  function changeTag(t){
+    if(!sel) return;
+    onUpdate({...sel,tag:t,updatedAt:new Date().toISOString()});
+  }
+
+  // sync editor when switching notes
+  React.useEffect(()=>{
+    if(editorRef.current && sel){
+      editorRef.current.innerHTML = sel.content||'';
+    }
+  },[selId]);
+
+  const TAGS = ['','Meeting','Idea','Personal','Random'];
+  const TAG_COLORS = {'Meeting':'#34d399','Idea':'#fbbf24','Personal':'#60a5fa','Random':'#f87171','':`${T3}`};
+
+  const isMobile = window.innerWidth < 640;
+
+  return (
+    <div style={{display:'flex',height:'100%',overflow:'hidden'}}>
+      {/* LIST PANEL */}
+      {(showList||!isMobile) && (
+        <div style={{width:isMobile?'100%':260,flexShrink:0,borderRight:`1px solid ${BD}`,display:'flex',flexDirection:'column',background:S1}}>
+          <div style={{padding:'10px 12px',borderBottom:`1px solid ${BD}`,display:'flex',gap:8,alignItems:'center'}}>
+            <div style={{flex:1,display:'flex',alignItems:'center',gap:6,background:S2,border:`1px solid ${BD}`,borderRadius:8,padding:'5px 10px'}}>
+              <Search size={12} color={T3}/>
+              <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search notes..." style={{background:'none',border:'none',outline:'none',color:T1,fontSize:12,width:'100%'}}/>
+            </div>
+            <button onClick={newNote} style={{width:30,height:30,borderRadius:8,background:ACC,border:'none',color:'#fff',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+              <Plus size={15}/>
+            </button>
+          </div>
+          <div style={{flex:1,overflowY:'auto',padding:8}}>
+            {filtered.length===0&&<div style={{color:T3,fontSize:12,textAlign:'center',marginTop:40}}>No notes yet</div>}
+            {filtered.map(n=>(
+              <div key={n.id} onClick={()=>{setSelId(n.id);setShowList(false);}} style={{padding:'10px 12px',borderRadius:8,marginBottom:6,cursor:'pointer',background:selId===n.id?S3:n.color||S2,border:`1px solid ${selId===n.id?ACCL:BD}`,transition:'border .15s'}}>
+                <div style={{fontSize:12,fontWeight:700,color:T1,marginBottom:3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{n.title||'Untitled'}</div>
+                <div style={{fontSize:10,color:T3,display:'flex',alignItems:'center',gap:6}}>
+                  <span>{new Date(n.updatedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>
+                  {n.tag&&<span style={{background:TAG_COLORS[n.tag]+'33',color:TAG_COLORS[n.tag],borderRadius:4,padding:'1px 5px',fontWeight:600}}>{n.tag}</span>}
+                </div>
+                <div style={{fontSize:11,color:T2,marginTop:4,display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',overflow:'hidden'}}>{(n.content||'').replace(/<[^>]+>/g,'').slice(0,80)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* EDITOR PANEL */}
+      {(!showList||!isMobile) && (
+        <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',background:sel?.color||BG}}>
+          {sel ? (<>
+            {/* Editor header */}
+            <div style={{padding:'8px 14px',borderBottom:`1px solid ${BD}`,display:'flex',alignItems:'center',gap:8,flexShrink:0,flexWrap:'wrap'}}>
+              {isMobile&&(
+                <button onClick={()=>setShowList(true)} style={{background:'none',border:'none',color:T2,cursor:'pointer',padding:4}}>
+                  <ChevronLeft size={16}/>
+                </button>
+              )}
+              <input defaultValue={sel.title} key={sel.id+'t'} onChange={onTitleChange}
+                style={{flex:1,background:'none',border:'none',outline:'none',color:T1,fontSize:15,fontWeight:700,minWidth:80}}
+                placeholder="Title..."/>
+              {/* Tag selector */}
+              <select value={sel.tag||''} onChange={e=>changeTag(e.target.value)}
+                style={{background:S2,border:`1px solid ${BD}`,borderRadius:6,color:sel.tag?TAG_COLORS[sel.tag]:T3,fontSize:10,padding:'3px 6px',cursor:'pointer'}}>
+                {TAGS.map(t=><option key={t} value={t}>{t||'No tag'}</option>)}
+              </select>
+              {/* Note color dots */}
+              <div style={{display:'flex',gap:4}}>
+                {NOTE_COLORS.map((c,i)=>(
+                  <button key={c} title={NOTE_COLOR_LABELS[i]} onClick={()=>changeColor(c)}
+                    style={{width:14,height:14,borderRadius:'50%',background:c,border:`2px solid ${sel.color===c?T1:BD2}`,cursor:'pointer',padding:0}}/>
+                ))}
+              </div>
+              <button onClick={()=>{if(window.confirm('Delete this note?')){onDelete(sel.id);setSelId(null);setShowList(true);}}}
+                style={{background:'none',border:'none',color:'#f87171',cursor:'pointer',padding:4}}>
+                <Trash2 size={14}/>
+              </button>
+            </div>
+
+            {/* Toolbar */}
+            <div style={{padding:'5px 14px',borderBottom:`1px solid ${BD}`,display:'flex',gap:4,flexWrap:'wrap',flexShrink:0,background:S2+'aa'}}>
+              {[
+                {label:'B',cmd:'bold',style:{fontWeight:700}},
+                {label:'I',cmd:'italic',style:{fontStyle:'italic'}},
+                {label:'S',cmd:'strikeThrough',style:{textDecoration:'line-through'}},
+                {label:'U',cmd:'underline',style:{textDecoration:'underline'}},
+              ].map(b=>(
+                <button key={b.cmd} onMouseDown={e=>{e.preventDefault();exec(b.cmd);}}
+                  style={{...b.style,background:S3,border:`1px solid ${BD2}`,color:T1,borderRadius:5,padding:'3px 8px',cursor:'pointer',fontSize:12,minWidth:28}}>
+                  {b.label}
+                </button>
+              ))}
+              <div style={{width:1,background:BD2,margin:'0 2px'}}/>
+              {[['H1','formatBlock','h1'],['H2','formatBlock','h2']].map(([l,c,v])=>(
+                <button key={l} onMouseDown={e=>{e.preventDefault();exec(c,v);}}
+                  style={{background:S3,border:`1px solid ${BD2}`,color:ACCL,borderRadius:5,padding:'3px 7px',cursor:'pointer',fontSize:11,fontWeight:700}}>
+                  {l}
+                </button>
+              ))}
+              <div style={{width:1,background:BD2,margin:'0 2px'}}/>
+              <button onMouseDown={e=>{e.preventDefault();exec('insertUnorderedList');}}
+                style={{background:S3,border:`1px solid ${BD2}`,color:T1,borderRadius:5,padding:'3px 7px',cursor:'pointer',fontSize:12}}>• List</button>
+              <button onMouseDown={e=>{e.preventDefault();exec('insertOrderedList');}}
+                style={{background:S3,border:`1px solid ${BD2}`,color:T1,borderRadius:5,padding:'3px 7px',cursor:'pointer',fontSize:12}}>1. List</button>
+              <button onMouseDown={e=>{e.preventDefault();exec('insertHTML','<input type="checkbox"> ');}}
+                style={{background:S3,border:`1px solid ${BD2}`,color:'#34d399',borderRadius:5,padding:'3px 7px',cursor:'pointer',fontSize:12}}>☑ Check</button>
+              <div style={{width:1,background:BD2,margin:'0 2px'}}/>
+              {/* Text color */}
+              <label title="Text color" style={{position:'relative',display:'flex',alignItems:'center',cursor:'pointer'}}>
+                <span style={{background:S3,border:`1px solid ${BD2}`,borderRadius:5,padding:'3px 7px',fontSize:11,color:T1,display:'flex',alignItems:'center',gap:4}}>
+                  A <span style={{display:'inline-block',width:10,height:4,background:'currentColor',borderRadius:1}}/>
+                </span>
+                <input type="color" defaultValue="#ffffff" onInput={e=>{exec('foreColor',e.target.value);}}
+                  style={{position:'absolute',opacity:0,width:'100%',height:'100%',cursor:'pointer'}}/>
+              </label>
+              {/* Highlight color */}
+              <label title="Highlight" style={{position:'relative',display:'flex',alignItems:'center',cursor:'pointer'}}>
+                <span style={{background:S3,border:`1px solid ${BD2}`,borderRadius:5,padding:'3px 7px',fontSize:11,color:'#fbbf24',display:'flex',alignItems:'center',gap:4}}>
+                  HL
+                </span>
+                <input type="color" defaultValue="#fbbf24" onInput={e=>{exec('hiliteColor',e.target.value);}}
+                  style={{position:'absolute',opacity:0,width:'100%',height:'100%',cursor:'pointer'}}/>
+              </label>
+              <button onMouseDown={e=>{e.preventDefault();exec('removeFormat');}}
+                style={{background:S3,border:`1px solid ${BD2}`,color:T3,borderRadius:5,padding:'3px 7px',cursor:'pointer',fontSize:11}}>✕ fmt</button>
+            </div>
+
+            {/* Editor body */}
+            <div
+              ref={editorRef}
+              contentEditable
+              suppressContentEditableWarning
+              onInput={onEditorInput}
+              style={{flex:1,overflowY:'auto',padding:'16px 20px',outline:'none',color:T1,fontSize:14,lineHeight:1.7,caretColor:ACCL}}
+            />
+            <div style={{padding:'4px 14px',fontSize:10,color:T3,borderTop:`1px solid ${BD}`,flexShrink:0}}>
+              Saved · {new Date(sel.updatedAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}
+            </div>
+          </>):(
+            <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12,color:T3}}>
+              <div style={{fontSize:32}}>📝</div>
+              <div style={{fontSize:13}}>Select a note or create new one</div>
+              <button onClick={newNote} style={{padding:'8px 20px',borderRadius:8,background:ACC,border:'none',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>+ New Note</button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── THE NUN ─────────────────────────────────────────────────────────────────
 function TheNun({session, demoMode}) {
   const [tasks,      setTasks]      = useState([]);
@@ -2174,7 +2377,10 @@ function TheNun({session, demoMode}) {
   const [inboxSubView, setInboxSubView] = useState('mine'); // 'mine'|'delegated'|'commitment'
   const [toast,        setToast]        = useState('');
   const [now,          setNow]          = useState(new Date());
+  const [notes,        setNotes]        = useState([]);
   const gcal = useGoogleCalendar();
+
+  useEffect(()=>{ loadNotesFromDB().then(setNotes); },[]);
 
   useEffect(()=>{
     loadTasksFromDB().then(raw=>{
@@ -2218,6 +2424,10 @@ function TheNun({session, demoMode}) {
   function savePlan(data){persist(tasks.map(t=>t.id===data.id?data:t));setPlanTask(null);showToast('Saved ✓');}
   function deleteTk(id){persist(tasks.filter(t=>t.id!==id), id);setPlanTask(null);showToast('Deleted');}
   function updateTask(data){persist(tasks.map(t=>t.id===data.id?data:t));showToast('Updated ✓');}
+
+  function addNote(n){setNotes(prev=>[...prev,n]);saveNoteToDB(n);}
+  function updateNote(n){setNotes(prev=>prev.map(x=>x.id===n.id?n:x));saveNoteToDB(n);}
+  function deleteNote(id){setNotes(prev=>prev.filter(x=>x.id!==id));deleteNoteFromDB(id);}
 
   function saveMood(m){ setMood(m); localStorage.setItem('thenun:mood:'+today(), m); }
 
@@ -2341,6 +2551,7 @@ function TheNun({session, demoMode}) {
           {[
             ['inbox','Inbox',Inbox,inboxCount],
             ['schedule','Schedule',Calendar,0],
+            ['notes','Notes',MessageSquare,notes.length],
             ['review','Review',Eye,0],
             ['insights','Insights',BarChart2,bottleneckCount],
           ].map(([k,l,Icon,cnt])=>(
@@ -2412,6 +2623,11 @@ function TheNun({session, demoMode}) {
               onGcalClick={setSelGcalEvent}
               typeFilter={typeFilter}
             />
+          </div>
+        )}
+        {view==='notes'&&(
+          <div style={{flex:1,overflow:'hidden',display:'flex'}}>
+            <NotesView notes={notes} onAdd={addNote} onUpdate={updateNote} onDelete={deleteNote}/>
           </div>
         )}
         {view==='review'&&(
